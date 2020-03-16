@@ -30,3 +30,5 @@ convenience.
 
 If you move or rename `~/apps/zsh-5.8-linux-x86_64-static`, remember to call `.../relocate`
 afterwards. This script configures Zsh so that it loads builtin functions from the new location.
+
+You can download built archives from [releases](https://github.com/romkatv/zsh-bin/releases).
