@@ -1,6 +1,6 @@
 # zsh-bin
 
-Statically-linked, hermetic, relocatable Zsh.
+> Statically-linked, hermetic, relocatable Zsh.
 
 Usage:
 
