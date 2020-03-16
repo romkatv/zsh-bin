@@ -1,0 +1,80 @@
+#!/bin/sh
+
+set -ue
+
+if [ "$(uname -s)" != Linux ]; then
+  printf '[error] unsupported kernel' >&2
+  exit 1
+fi
+
+if ! command -v docker; then
+  printf '[error] docker not found' >&2
+  exit 1
+fi
+
+docker run -v "$PWD":/out -it --rm alpine:3.9.5 /bin/sh -uexc "$(cat <<\END
+apk update
+apk add          \
+  autoconf       \
+  bash           \
+  binutils       \
+  g++            \
+  gcc            \
+  gdbm-dev       \
+  groff          \
+  make           \
+  man            \
+  musl-dev       \
+  ncurses        \
+  ncurses-dev    \
+  ncurses-static \
+  pcre-dev       \
+  util-linux
+
+cd
+wget https://gitlab.com/fbb-git/icmake/-/archive/9.03.01/icmake-9.03.01.tar.gz
+tar -xzf icmake-9.03.01.tar.gz
+cd icmake-9.03.01/icmake
+./icm_prepare /
+./icm_bootstrap x
+./icm_install all
+
+cd
+wget https://gitlab.com/fbb-git/yodl/-/archive/4.02.01/yodl-4.02.01.tar.gz
+tar -xzf yodl-4.02.01.tar.gz
+cd yodl-4.02.01/yodl
+./build programs
+./build macros
+./build install programs /
+./build install macros /
+
+cd
+wget https://github.com/zsh-users/zsh/archive/zsh-5.8.tar.gz
+tar -xzf zsh-5.8.tar.gz
+cd zsh-zsh-5.8
+./Util/preconfig
+kernel=$(uname -s | tr '[A-Z]' '[a-z]')
+arch=$(uname -m | tr '[A-Z]' '[a-z]')
+name=zsh-5.8-"$kernel"-"$arch"-static
+./configure                 \
+  --prefix=/"$name"         \
+  --disable-etcdir          \
+  --disable-site-fndir      \
+  --disable-site-scriptdir  \
+  --enable-zsh-secure-free  \
+  --enable-function-subdirs \
+  --disable-dynamic         \
+  --enable-ldflags=-static  \
+  --enable-libc-musl        \
+  --enable-custom-patchlevel="$name"
+sed 's/link=no/link=static/' -i config.modules
+make -j 20 install
+strip -s /"$name"/bin/zsh
+rm /"$name"/bin/zsh-5.8
+cp -r /usr/share/terminfo /"$name"/share/
+/"$name"/bin/zsh -c 'true'
+tar -C / -pczf /out/"$name".tar.gz "$name"
+
+printf 'SUCCESS: created %s\n' "$name"
+END
+)"
