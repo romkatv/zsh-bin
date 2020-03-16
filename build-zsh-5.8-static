@@ -12,7 +12,10 @@ if ! command -v docker; then
   exit 1
 fi
 
-docker run -v "$PWD":/out -it --rm alpine:3.9.5 /bin/sh -uexc "$(cat <<\END
+# add -e
+docker run -v "$PWD":/out -it --rm alpine:3.9.5 /bin/sh -uxc "$(cat <<\DOCKER_END
+(
+set -e
 apk update
 apk add          \
   autoconf       \
@@ -52,29 +55,148 @@ cd
 wget https://github.com/zsh-users/zsh/archive/zsh-5.8.tar.gz
 tar -xzf zsh-5.8.tar.gz
 cd zsh-zsh-5.8
-./Util/preconfig
+
 kernel=$(uname -s | tr '[A-Z]' '[a-z]')
 arch=$(uname -m | tr '[A-Z]' '[a-z]')
 name=zsh-5.8-"$kernel"-"$arch"-static
+
+./Util/preconfig
 ./configure                 \
   --prefix=/"$name"         \
   --disable-etcdir          \
   --disable-site-fndir      \
   --disable-site-scriptdir  \
   --enable-zsh-secure-free  \
-  --enable-function-subdirs \
   --disable-dynamic         \
   --enable-ldflags=-static  \
   --enable-libc-musl        \
   --enable-custom-patchlevel="$name"
+
 sed 's/link=no/link=static/' -i config.modules
+sed $'113i\\\t    cp -f ../zshpaths.h zshpaths.h.tmp; \\\\' -i Src/zsh.mdd
+
+cat >zshpaths.h <<\END
+#define MODULE_DIR "/dev/null"
+
+#define SCRIPT_DIR_TAG ":zsh-script-dir:"
+#define FPATH_DIR_TAG ":zsh-fpath-dir:"
+
+extern volatile char tagged_script_dir[sizeof(SCRIPT_DIR_TAG) + 4096];
+extern volatile char tagged_fpath_dir[sizeof(FPATH_DIR_TAG) + 4096];
+
+#define SCRIPT_DIR ((const char*)(tagged_script_dir + sizeof(SCRIPT_DIR_TAG) - 1))
+#define FPATH_DIR ((const char*)(tagged_fpath_dir + sizeof(FPATH_DIR_TAG) - 1))
+END
+
+cat >>Src/init.c <<\END
+volatile char tagged_script_dir[sizeof(SCRIPT_DIR_TAG) + 4096] = {
+    SCRIPT_DIR_TAG "/usr/share/zsh/5.8/scripts"
+};
+volatile char tagged_fpath_dir[sizeof(FPATH_DIR_TAG) + 4096] = {
+    FPATH_DIR_TAG "/usr/share/zsh/5.8/functions"
+};
+END
+
 make -j 20 install
+
 strip -s /"$name"/bin/zsh
 rm /"$name"/bin/zsh-5.8
 cp -r /usr/share/terminfo /"$name"/share/
-/"$name"/bin/zsh -c 'true'
+
+cat >/"$name"/share/zsh/5.8/scripts/relocate <<\END
+#!/bin/sh
+
+set -ue
+
+if [ $# -gt 2 ]; then
+  printf 'usage: relocate [/path/to/zsh] [/path/to/root-dir]\n' >&2
+  exit 1
+fi
+
+if [ $# -ge 1 ]; then
+  zsh=$1
+else
+  self_dir=$(dirname -- "$0")
+  zsh="$self_dir"/../../../../bin/zsh
+fi
+
+if [ $# -ge 2 ]; then
+  root_dir=$(readlink -f -- "$2")
+else
+  root_dir="$(dirname -- "$zsh")"/..
+  root_dir=$(readlink -f -- "$root_dir")
+fi
+
+if [ ! -x "$zsh" ]; then
+  printf 'not an executable file: %s\n' "$zsh" >&2
+  exit 1
+fi
+
+if ! grep -qF ':zsh-script-dir:' -- "$zsh" || ! grep -qF ':zsh-fpath-dir:' -- "$zsh"; then
+  printf 'not a relocatable zsh binary: %s\n' "$zsh" >&2
+  exit 1
+fi
+
+if [ ! -d "$root_dir" ]; then
+  printf 'not a directory: %s\n' "$root_dir" >&2
+  exit 1
+fi
+
+if [ "$root_dir" != / ]; then
+  root_dir="$root_dir"/
+fi
+
+# 4096 minus 23 for "share/zsh/5.8/functions"
+if [ ${#root_dir} -gt 4073 ]; then
+  printf 'directory name too long: %s\n' "$root_dir" >&2
+  exit 1
+fi
+
+cp -pf -- "$zsh" "$zsh".tmp
+bin=$(LC_ALL=C tr -c '[a-z]:-' ' ' <"$zsh")
+
+patch() {
+  local prefix="${bin%:zsh-$1-dir:*}"
+  [ "$prefix" != "$bin" ]
+  prefix="$prefix:zsh-$1-dir:"
+  local dir="${root_dir}share/zsh/5.8/$2"
+  dd if=/dev/zero of="$zsh".tmp bs=1 seek=${#prefix} count=4096 conv=notrunc
+  printf '%s' "$dir" | dd of="$zsh".tmp bs=1 seek=${#prefix} count=${#dir} conv=notrunc
+}
+
+patch script scripts
+patch fpath  functions
+
+fpath=$("$zsh".tmp -c 'print -r -- $fpath[1]')
+if [ "${fpath#$root_dir}" = "$fpath" ]; then
+  printf 'failed to relocate zsh\n' >&2
+  exit 1
+fi
+
+mv -f -- "$zsh".tmp "$zsh"
+END
+
+chmod +x /"$name"/share/zsh/5.8/scripts/relocate
+
+diff -q -- /"$name"/bin/zsh Src/zsh
+/"$name"/share/zsh/5.8/scripts/relocate
+diff -q -- /"$name"/bin/zsh Src/zsh && exit 1
+/"$name"/bin/zsh -ec 'zmodload zsh/zselect; autoload -Uz add-zsh-hook; add-zsh-hook precmd x'
+/"$name"/share/zsh/5.8/scripts/relocate /"$name"/bin/zsh /
+diff -q -- /"$name"/bin/zsh Src/zsh
+
 tar -C / -pczf /out/"$name".tar.gz "$name"
 
 printf 'SUCCESS: created %s\n' "$name"
-END
+)
+
+apk add curl bash git
+curl -fsSLo ~/.zshrc https://raw.githubusercontent.com/romkatv/zsh4humans/master/.zshrc
+kernel=$(uname -s | tr '[A-Z]' '[a-z]')
+arch=$(uname -m | tr '[A-Z]' '[a-z]')
+name=zsh-5.8-"$kernel"-"$arch"-static
+PATH="$PATH:/$name/bin"
+/"$name"/share/zsh/5.8/scripts/relocate
+zsh
+DOCKER_END
 )"
