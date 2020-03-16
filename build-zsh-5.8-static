@@ -3,16 +3,15 @@
 set -ue
 
 if [ "$(uname -s)" != Linux ]; then
-  echo '[error] unsupported kernel' >&2
+  echo '[error] unsupported kernel, sorry!' >&2
   exit 1
 fi
 
-if ! command -v docker; then
-  echo '[error] docker not found' >&2
+if ! command -v docker >/dev/null 2>&1; then
+  echo '[error] docker not found; please install and retry' >&2
   exit 1
 fi
 
-# add -e
 docker run -v "$PWD":/out -e HOST_PWD="$PWD" -it --rm alpine:3.9.5 /bin/sh -uexc "$(cat <<\END
 apk update
 apk add          \
@@ -169,19 +168,18 @@ cat >/"$name"/share/zsh/5.8/scripts/relocate <<-\END
 	  exit 1
 	fi
 
+	echo "Setting root directory for $(readlink -f "$zsh") => $root_dir" >&2
+
 	magic=iLWDLaG9dUlsxzEQp10k
-	bin=$(LC_ALL=C tr -c '[:alnum:]:' '\n' <"$zsh")
-
-	if [ "$(echo "$bin" | grep ":$magic:" | cut -c 22- | sort)" != $'fpath\nscript\nterminfo' ]; then
-	  echo "not a relocatable zsh binary: $zsh" >&2
-	  exit 1
-	fi
-
+	bin=$(LC_ALL=C tr -c '[:alnum:]:' ' ' <"$zsh")
 	cp -pf -- "$zsh" "$zsh".tmp
 
 	patch() {
 	  local prefix="${bin%:$magic:$1:*}"
-	  [ "$prefix" != "$bin" ]
+	  if [ "$prefix" = "$bin" ]; then
+	    echo "not a relocatable zsh binary: $zsh" >&2
+      exit 1
+	  fi
 	  prefix="$prefix:$magic:$1:"
 	  local dir="${root_dir}$2"
 	  dd if=/dev/zero of="$zsh".tmp bs=1 seek=${#prefix} count=4096 conv=notrunc
@@ -192,8 +190,8 @@ cat >/"$name"/share/zsh/5.8/scripts/relocate <<-\END
 	patch fpath    share/zsh/5.8/functions
 	patch terminfo share/terminfo
 
-	fpath=$("$zsh".tmp -c 'print -r -- $fpath[1]')
-	if [ "${fpath#$root_dir}" != "$fpath" ]; then
+	if ! fpath=$("$zsh".tmp -c 'print -r -- $fpath[1]') ||
+    [ "${fpath#$root_dir}" = "$fpath" ]; then
 	  echo "failed to relocate zsh" >&2
 	  exit 1
 	fi
@@ -210,9 +208,9 @@ chmod +x /"$name"/share/zsh/5.8/scripts/relocate
 tar -C / -pczf /out/tmp."$name".tar.gz "$name"
 mv -f -- /out/tmp."$name".tar.gz /out/"$name".tar.gz
 
-set +x
-cat <<-END
-	SUCCESS: created $name.tar.gz in the current directory
+cat >&2 <<-END
+	-------------------------------------------------
+	SUCCESS: created $name.tar.gz in the current directory.
 
 	To install zsh from it:
 
@@ -221,11 +219,11 @@ cat <<-END
 	  tar -xzf $HOST_PWD/$name.tar.gz
 	  $name/share/zsh/5.8/scripts/relocate
 
-	After that you can add ~/apps/$name/bin to PATH
-	and invoke zsh as usual.
+	After that you can invoke ~/apps/$name/bin/zsh. You'll
+  probably want to add ~/apps/$name/bin to PATH.
 
 	You can move or rename ~/apps/$name as long as you
 	call \`relocate\` afterwards.
-        END
+	END
 END
 )"
