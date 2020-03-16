@@ -3,7 +3,7 @@
 # Usage: ./build-zsh-5.8-static
 #
 # Creates an archive containing statically-linked, hermetic,
-# relocatable zsh 5.8. Installation of zsh from the archive
+# relocatable Zsh 5.8. Installation of Zsh from the archive
 # doesn't require libc, terminfo, ncurses or root access.
 # As long as the target machine has a compatible CPU and
 # Linux kernel, it'll work.
@@ -11,7 +11,7 @@
 # Running ./build-zsh-5.8-static on x86_64 Linux will create
 # zsh-5.8-linux-x86_64-static.tar.gz in the current directory.
 #
-# To install zsh from the archive, copy it to the target
+# To install Zsh from the archive, copy it to the target
 # machine's home directory and run:
 #
 #   mkdir -p ~/apps
@@ -26,7 +26,7 @@
 #
 # If you move or rename ~/apps/zsh-5.8-linux-x86_64-static,
 # remember to call `.../relocate` afterwards. This script
-# configures zsh so that it loads builtin functions from the
+# configures Zsh so that it loads builtin functions from the
 # new location.
 
 set -ue
@@ -242,12 +242,12 @@ cat >&2 <<-END
 	SUCCESS: created ./$name.tar.gz.
 
 	This archive contains statically-linked, hermetic,
-	relocatable zsh 5.8. Installation of zsh from the archive
+	relocatable Zsh 5.8. Installation of Zsh from the archive
 	doesn't require libc, terminfo, ncurses or root access.
 	As long as the target machine has a compatible CPU and
 	Linux kernel, it'll work.
 
-	To install zsh from the archive, copy it to the target
+	To install Zsh from the archive, copy it to the target
 	machine's home directory and run:
 
 	  mkdir -p ~/apps
@@ -262,7 +262,7 @@ cat >&2 <<-END
 
 	If you move or rename ~/apps/$name,
 	remember to call \`.../relocate\` afterwards. This script
-	configures zsh so that it loads builtin functions from the
+	configures Zsh so that it loads builtin functions from the
 	new location.
 	END
 END
