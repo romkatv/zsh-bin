@@ -1,4 +1,33 @@
 #!/bin/sh
+#
+# Usage: ./build-zsh-5.8-static
+#
+# Creates an archive containing statically-linked, hermetic,
+# relocatable zsh 5.8. Installation of zsh from the archive
+# doesn't require libc, terminfo, ncurses or root access.
+# As long as the target machine has a compatible CPU and
+# Linux kernel, it'll work.
+#
+# Running ./build-zsh-5.8-static on x86_64 Linux will create
+# zsh-5.8-linux-x86_64-static.tar.gz in the current directory.
+#
+# To install zsh from the archive, copy it to the target
+# machine's home directory and run:
+#
+#   mkdir -p ~/apps
+#   cd ~/apps
+#   tar -xzf ~/zsh-5.8-linux-x86_64-static.tar.gz
+#   zsh-5.8-linux-x86_64-static/share/zsh/5.8/scripts/relocate
+#   rm ~/zsh-5.8-linux-x86_64-static.tar.gz
+#
+# After that you can invoke ~/apps/zsh-5.8-linux-x86_64-static/bin/zsh
+# and it'll just work, although you'll probably want to add
+# ~/apps/zsh-5.8-linux-x86_64-static/bin to PATH for convenience.
+#
+# If you move or rename ~/apps/zsh-5.8-linux-x86_64-static,
+# remember to call `.../relocate` afterwards. This script
+# configures zsh so that it loads builtin functions from the
+# new location.
 
 set -ue
 
@@ -12,7 +41,7 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 1
 fi
 
-docker run -v "$PWD":/out -e HOST_PWD="$PWD" -it --rm alpine:3.9.5 /bin/sh -uexc "$(cat <<\END
+docker run -v "$PWD":/out -it --rm alpine:3.9.5 /bin/sh -uexc "$(cat <<\END
 apk update
 apk add          \
   autoconf       \
@@ -210,20 +239,31 @@ mv -f -- /out/tmp."$name".tar.gz /out/"$name".tar.gz
 
 cat >&2 <<-END
 	-------------------------------------------------
-	SUCCESS: created $name.tar.gz in the current directory.
+	SUCCESS: created ./$name.tar.gz.
 
-	To install zsh from it:
+	This archive contains statically-linked, hermetic,
+	relocatable zsh 5.8. Installation of zsh from the archive
+	doesn't require libc, terminfo, ncurses or root access.
+	As long as the target machine has a compatible CPU and
+	Linux kernel, it'll work.
+
+	To install zsh from the archive, copy it to the target
+	machine's home directory and run:
 
 	  mkdir -p ~/apps
 	  cd ~/apps
-	  tar -xzf $HOST_PWD/$name.tar.gz
+	  tar -xzf ~/$name.tar.gz
 	  $name/share/zsh/5.8/scripts/relocate
+	  rm ~/$name.tar.gz
 
-	After that you can invoke ~/apps/$name/bin/zsh. You'll
-  probably want to add ~/apps/$name/bin to PATH.
+	After that you can invoke ~/apps/$name/bin/zsh
+	and it'll just work, although you'll probably want to add
+	~/apps/$name/bin to PATH for convenience.
 
-	You can move or rename ~/apps/$name as long as you
-	call \`relocate\` afterwards.
+	If you move or rename ~/apps/$name,
+	remember to call \`.../relocate\` afterwards. This script
+	configures zsh so that it loads builtin functions from the
+	new location.
 	END
 END
 )"
