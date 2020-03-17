@@ -44,11 +44,97 @@ compatible CPU and Linux kernel, it'll work.
 
 You can find built archives in [releases](https://github.com/romkatv/zsh-bin/releases).
 
+## How it works
+
+A regular build of Zsh cannot be transplanted to another machine due to having dependencies on
+system files and hard-coded absolute paths to Zsh's own autoloadable functions and scripts.
+
+zsh-bin uses fully static linking to avoid dependencies on dynamic libraries and program loader. It
+includes an extensive terminfo database that it falls back to if there is no suitable entry
+for `$TERM` in the system database. These two measures remove all dependencies on files outside of
+zsh-bin.
+
+The main `zsh` binary in zsh-bin contains hard-coded absolute paths to autoloadable functions and
+scripts, just like in the regular build of Zsh, but they are laid out in such a way as to allow for
+replacement through binary patching. In a nutshell, when you build Zsh normally, the C source code
+contains something like this:
+
+```c
+#define FPATH_DIR "/usr/share/zsh/5.8/functions"
+```
+
+If you start `zsh` and check the value of `fpath` parameter, you'll see that it contains
+`/usr/share/zsh/5.8/functions`. This comes from `FPATH_DIR` that got fixed during compilation.
+
+When you build Zsh with zsh-bin scripts, the C code looks a bit different:
+
+```c
+#define FPATH_DIR_TAG ":iLWDLaG9dUlsxzEQp10k:fpath:"
+#define FPATH_DIR ((const char *)(tagged_fpath_dir + sizeof(FPATH_DIR_TAG) - 1))
+volatile char tagged_fpath_dir[sizeof(FPATH_DIR_TAG) + 4096] = {
+  FPATH_DIR_TAG "/usr/share/zsh/5.8/functions"
+};
+```
+
+`FPATH_DIR` still resolves to `/usr/share/zsh/5.8/functions`, so `fpath` parameter has the same
+value as before. What's different is the content of `zsh` binary.
+
+Regular `zsh` binary:
+
+```text
+                  FPATH_DIR points here
+                            |
+                            v
+????????????????????????????/usr/share/zsh/5.8/functions·???????????????????????
+            ^                                           ^              ^
+            |                                           |              |
+            |                                     NUL terminator       |
+            |                                                          |
+            +---------- other data and code----------------------------+
+```
+
+`zsh` from zsh-bin:
+
+```text
+                  FPATH_DIR points here
+                            |
+                            v
+:iLWDLaG9dUlsxzEQp10k:fpath:/usr/share/zsh/5.8/functions·***********************
+            ^                                           ^              ^
+            |                                           |              |
+  magic marker, trailing 10k totally accidental ;-)     |              |
+                                                        |              |
+                                                  NUL terminator       |
+                                                                       |
+                                enough space for a 4096-character-long directory
+```
+
+Now it's possible to "relocate" autoloadable functions by finding `:iLWDLaG9dUlsxzEQp10k:` inside
+`zsh` and writing a new directory after it. `relocate` script included in zsh-bin does just
+that. It's written in POSIX sh, so it'll run anywhere. Here's the relevant part of `relocate`
+(simplified):
+
+```sh
+magic=iLWDLaG9dUlsxzEQp10k
+bin=$(LC_ALL=C tr -c '[:alnum:]:' ' ' <"$zsh")
+prefix="${bin%:$magic:fpath:*}:$magic:fpath:"
+dd if=/dev/zero of="$zsh" bs=1 seek=${#prefix} count=4096 conv=notrunc
+echo "$new_fpath_dir" | dd of="$zsh" bs=1 seek=${#prefix} count=${#dir} conv=notrunc
+```
+
+## Supported platforms
+
+`build-zsh-5.8-static` has been tested only x86_64 Linux. In theory it should work with other
+popular CPU architectures.
+
+There is currently no support for kernels other than Linux. You cannot run the build script on WSL
+but you can use `zsh-5.8-linux-x86_64-static.tar.gz` there.
+
 ## Why?
 
-Assuming that you want to use Zsh 5.8, ideally you'll want to install it with the official package
-manager for your OS. If your OS doesn't provide an option to install Zsh 5.8, or you don't have root
-access to install it, this option is out.
+Assuming that you want to use Zsh 5.8 (who doesn't, right?), ideally you would install it with the
+official package manager for your OS. If your OS doesn't provide an option to install Zsh 5.8,
+or you don't have root access to install it, this option is out.
 
 The next thing you can try is to [build Zsh from source](
   https://github.com/zsh-users/zsh/blob/master/INSTALL) on the target machine. This method allows
