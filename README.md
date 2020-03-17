@@ -47,7 +47,7 @@ You can find built archives in [releases](https://github.com/romkatv/zsh-bin/rel
 ## Why?
 
 Assuming that you want to use Zsh 5.8, ideally you'll want to install it with the official package
-manager for you OS. If your OS doesn't provide an option to install Zsh 5.8, or you don't have root
+manager for your OS. If your OS doesn't provide an option to install Zsh 5.8, or you don't have root
 access to install it, this option is out.
 
 The next thing you can try is to [build Zsh from source](
@@ -61,7 +61,7 @@ necessary build tools, you can compile Zsh there and copy build artifacts to the
 machine. If you place all files in the same location and set a few custom environment variables, it
 should work.
 
-If all else fails, zsh-bin is there for you. Download a 3MB archive, extract it, and enjoy Zsh 5.8.
+If all else fails, zsh-bin is here for you. Download a 3MB archive, extract it, and enjoy Zsh 5.8.
 
 ## No, seriously, why?
 
@@ -89,7 +89,8 @@ In March of 2020 an [announcement](
   https://www.reddit.com/r/zsh/comments/fiq9w2/bring_zsh_with_ohmyzsh_wherever_you_go_through/) was
 posted on [/r/zsh](https://www.reddit.com/r/zsh/). It mentioned that "xxh uses the portable
 version of Zsh". I thought it would be cool to migrate my `ssh.bash` script to Zsh and install
-"the portable version of Zsh" on the remote machine if there isn't one already installed.
+"the portable version of Zsh" on the remote machine if there isn't one already installed (this is
+basically what [xxh](https://github.com/xxh/xxh) does).
 
 This worked in some cases but not always as the version of Zsh from xxh turned out not portable
 enough for my needs. I set out to build a more portable alternative and created zsh-bin. Since it
