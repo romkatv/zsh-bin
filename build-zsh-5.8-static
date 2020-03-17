@@ -220,7 +220,7 @@ cat >/"$name"/share/zsh/5.8/scripts/relocate <<-\END
 	patch terminfo share/terminfo
 
 	if ! fpath=$("$zsh".tmp -c 'print -r -- $fpath[1]') ||
-    [ "${fpath#$root_dir}" = "$fpath" ]; then
+	   [ "${fpath#$root_dir}" = "$fpath" ]; then
 	  echo "failed to relocate zsh" >&2
 	  exit 1
 	fi
