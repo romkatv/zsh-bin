@@ -34,9 +34,11 @@ cd zsh-bin
 ./build-zsh-5.8-static
 ```
 
-This creates `zsh-5.8-linux-x86_64-static.tar.gz` in the current directory. This archive contains
-statically-linked, hermetic, relocatable Zsh 5.8. Installation of Zsh from the archive doesn't
-require libc, terminfo, ncurses or root access. As long as the target machine has a compatible CPU
-and Linux kernel, it'll work.
+The build script requires Docker and internet connection.
+
+If everything goes well, `zsh-5.8-linux-x86_64-static.tar.gz` will appear in the current directory.
+This archive contains statically-linked, hermetic, relocatable Zsh 5.8. Installation of Zsh from the
+archive doesn't require libc, terminfo, ncurses or root access. As long as the target machine has a
+compatible CPU and Linux kernel, it'll work.
 
 You can find built archives in [releases](https://github.com/romkatv/zsh-bin/releases).
