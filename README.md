@@ -110,7 +110,7 @@ Regular `zsh` binary:
 :iLWDLaG9dUlsxzEQp10k:fpath:/usr/share/zsh/5.8/functions·***********************
             ^                                           ^              ^
             |                                           |              |
-  magic marker, trailing 10k totally accidental ;-)     |              |
+  magic marker, trailing p10k totally accidental ;-)    |              |
                                                         |              |
                                                   NUL terminator       |
                                                                        |
@@ -133,10 +133,9 @@ echo "$new_fpath_dir" | dd of="$zsh" bs=1 seek=${#prefix} count=${#dir} conv=not
 ## Supported platforms
 
 `build-zsh-5.8-static` has been tested only x86_64 Linux. In theory it should work with other
-popular CPU architectures.
+popular CPU architectures. There is currently no support for kernels other than Linux.
 
-There is currently no support for kernels other than Linux. You cannot run the build script on WSL
-but you can use `zsh-5.8-linux-x86_64-static.tar.gz` there.
+You cannot run the build script on WSL but you can use `zsh-5.8-linux-x86_64-static.tar.gz` there.
 
 ## Why?
 
@@ -175,15 +174,15 @@ ssh -t "$@" 'echo "'$dump'" | base64 -d | tar -C ~ -pxz  && exec bash -il'
 It archives a few local files and then runs a command over SSH. This command extracts files from
 the archive and starts Bash. Pretty simple.
 
-I'm using Zsh locally but Bash remotely. The reason being that I don't install Zsh on servers as
-it's not necessary for running things. Some of the servers are also tricky to get Zsh onto. For
-example, network routers running EdgeOS.
+I'm using Zsh locally but Bash remotely. I don't install Zsh on servers as it's not necessary for
+running things. Some of the servers are also tricky to get Zsh onto. For example, network routers
+running EdgeOS.
 
 In March of 2020 an [announcement](
   https://www.reddit.com/r/zsh/comments/fiq9w2/bring_zsh_with_ohmyzsh_wherever_you_go_through/) was
 posted on [/r/zsh](https://www.reddit.com/r/zsh/). It mentioned that "xxh uses the portable
 version of Zsh". I thought it would be cool to migrate my `ssh.bash` script to Zsh and install
-"the portable version of Zsh" on the remote machine if there isn't one already installed (this is
+the portable version of Zsh on the remote machine if there isn't one already installed (this is
 basically what [xxh](https://github.com/xxh/xxh) does).
 
 This worked in some cases but not always as the version of Zsh from xxh turned out not portable
