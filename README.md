@@ -188,3 +188,7 @@ basically what [xxh](https://github.com/xxh/xxh) does).
 This worked in some cases but not always as the version of Zsh from xxh turned out not portable
 enough for my needs. I set out to build a more portable alternative and created zsh-bin. Since it
 works for me, I figured it might be of use to others.
+
+My public standalone `ssh.zsh` script is [here](
+  https://github.com/romkatv/dotfiles-public/blob/master/bin/ssh.zsh). See comments at the top if
+you are curious.
