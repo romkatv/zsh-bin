@@ -2,6 +2,13 @@
 
 > Statically-linked, hermetic, relocatable Zsh.
 
+- [Installation](#installation)
+- [Compiling](#compiling)
+- [How it works](#how-it-works)
+- [Supported platforms](#supported-platforms)
+- [Why?](#why)
+- [No, seriously, why?](#no-seriously-why)
+
 ## Installation
 
 To install Zsh on x86_64 Linux box without root access, run the following commands:
