@@ -54,7 +54,8 @@ You can find built archives in [releases](https://github.com/romkatv/zsh-bin/rel
 ## How it works
 
 A regular build of Zsh cannot be transplanted to another machine due to having dependencies on
-system files and hard-coded absolute paths to Zsh's own autoloadable functions and scripts.
+system files and hard-coded absolute paths to Zsh's own autoloadable functions and scripts. This
+section explains how zsh-bin solves these problems.
 
 zsh-bin uses fully static linking to avoid dependencies on dynamic libraries and program loader. It
 includes an extensive terminfo database that it falls back to if there is no suitable entry
