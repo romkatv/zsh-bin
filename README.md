@@ -22,9 +22,10 @@ although you'll probably want to add `~/apps/zsh-5.8-linux-x86_64-static/bin` to
 convenience.
 
 Zsh won't read or write any files outside of its installation directory --
-`~/apps/zsh-5.8-linux-x86_64-static` in the example above. If you move or rename it, remember to
-call `.../relocate` afterwards. This script reconfigures Zsh so that it loads builtin functions from
-the new location.
+`~/apps/zsh-5.8-linux-x86_64-static` in the example above -- with the exception of per-user rc files
+such as `${ZDOTDIR:-~}/.zshrc`. If you move or rename this directory, you'll need to call
+`.../relocate` afterwards. This script reconfigures Zsh so that it loads builtin functions from the
+new location.
 
 ## Compiling
 
