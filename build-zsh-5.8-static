@@ -207,7 +207,7 @@ cat >/"$name"/share/zsh/5.8/scripts/relocate <<-\END
 	  local prefix="${bin%:$magic:$1:*}"
 	  if [ "$prefix" = "$bin" ]; then
 	    echo "not a relocatable zsh binary: $zsh" >&2
-      exit 1
+	    exit 1
 	  fi
 	  prefix="$prefix:$magic:$1:"
 	  local dir="${root_dir}$2"
