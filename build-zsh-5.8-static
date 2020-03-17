@@ -192,9 +192,15 @@ cat >/"$name"/share/zsh/5.8/scripts/relocate <<-\END
 	  exit 1
 	fi
 
+	magic=iLWDLaG9dUlsxzEQp10k
+
+	if [ -z "${root_dir##*$magic*}" ]; then
+	  echo "cannot relocate to this directory: $root_dir" >&2
+	  exit 1
+	fi
+
 	echo "Setting root directory for $(readlink -f "$zsh") => $root_dir" >&2
 
-	magic=iLWDLaG9dUlsxzEQp10k
 	bin=$(LC_ALL=C tr -c '[:alnum:]:' ' ' <"$zsh")
 	cp -pf -- "$zsh" "$zsh".tmp
 
