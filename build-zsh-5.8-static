@@ -90,8 +90,8 @@ case "$ZSH_BIN_KERNEL" in
       ncurses-dev    \
       ncurses-static \
       pcre-dev       \
-      util-linux
-
+      util-linux     \
+      tar
     cd
     wget https://gitlab.com/fbb-git/icmake/-/archive/9.03.01/icmake-9.03.01.tar.gz
     tar -xzf icmake-9.03.01.tar.gz
@@ -159,8 +159,7 @@ fi
   --enable-ldflags=-static              \
   --enable-cflags=-march="$ZSH_BIN_CPU" \
   --host="$ZSH_BIN_ARCH"                \
-  --enable-custom-patchlevel="$name"    \
-  $libc
+  --enable-custom-patchlevel="$name"
 
 sed_i() {
   [ $# = 2 ]
@@ -321,7 +320,13 @@ chmod +x /"$name"/share/zsh/5.8/scripts/relocate
 /"$name"/bin/zsh -ec 'zmodload zsh/zselect; autoload -Uz add-zsh-hook; add-zsh-hook precmd x'
 /"$name"/share/zsh/5.8/scripts/relocate /usr
 
-tar -C / -pczf /out/tmp."$name".tar.gz "$name"
+case "$ZSH_BIN_KERNEL" in
+  linux)   deref=--hard-dereference;;
+  freebsd) deref=;;
+  *) >&2 echo "[internal error] unhandled kernel: $ZSH_BIN_KERNEL"; exit 1;;
+esac
+
+tar -C / $deref -pczf /out/tmp."$name".tar.gz "$name"
 mv -f -- /out/tmp."$name".tar.gz /out/"$name".tar.gz
 
 case "$ZSH_BIN_KERNEL" in
