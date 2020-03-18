@@ -307,7 +307,7 @@ cat >&2 <<-END
     cd
 	  rm -rf ~/.zsh-bin ~/$name
 	  tar -xzf ~/$name.tar.gz
-    mv $name ~/.zsh-bin
+	  mv $name ~/.zsh-bin
 	  ~/.zsh-bin/share/zsh/5.8/scripts/relocate
 	  rm ~/$name.tar.gz
 
