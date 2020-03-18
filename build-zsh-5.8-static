@@ -277,8 +277,6 @@ cat >/"$name"/share/zsh/5.8/scripts/relocate <<-\END
 	  exit 1
 	fi
 
-	>&2 echo "setting root directory for $(readlink -f "$zsh") => $root_dir"
-
 	bin=$(LC_ALL=C tr -c '[:alnum:]:' ' ' <"$zsh")
 	cp -pf -- "$zsh" "$zsh".tmp
 
@@ -290,8 +288,16 @@ cat >/"$name"/share/zsh/5.8/scripts/relocate <<-\END
 	  fi
 	  prefix="$prefix:$magic:$1:"
 	  local dir="${root_dir}$2"
-	  dd if=/dev/zero of="$zsh".tmp bs=1 seek=${#prefix} count=4096 conv=notrunc
-	  printf '%s' "$dir" | dd of="$zsh".tmp bs=1 seek=${#prefix} count=${#dir} conv=notrunc
+	  local err
+	  if ! err=$(dd if=/dev/zero of="$zsh".tmp bs=1 seek=${#prefix} count=4096 conv=notrunc 2>&1); then
+	    >&2 printf '%s\n' "$err"
+	    exit 1
+    fi
+	  if ! err=$(printf '%s' "$dir" |
+	               dd of="$zsh".tmp bs=1 seek=${#prefix} count=${#dir} conv=notrunc 2>&1); then
+	    >&2 printf '%s\n' "$err"
+	    exit 1
+	  fi
 	}
 
 	patch script   share/zsh/5.8/scripts
