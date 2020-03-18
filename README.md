@@ -11,7 +11,8 @@
 
 ## Installation
 
-To install Zsh on a FreeBSD or Linux box without root access, run the following command:
+To install the latest version of Zsh on Linux or FreeBSD without root access, run the following
+command:
 
 ```sh
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/romkatv/zsh-bin/master/install)"
@@ -63,7 +64,7 @@ On Linux build is done in a Docker container, so you'll need to install docker f
 goes well, `zsh-5.8-linux-${ARCH}-static.tar.gz` will appear in the current directory.
 
 
-On FreeBSD build is done on host. On success, `zsh-5.8-freebsd-${ARCH}-static.tar.gz` is placed
+On FreeBSD build is done on the host. On success, `zsh-5.8-freebsd-${ARCH}-static.tar.gz` is placed
 in `/out` and some junk is left over in the home directory. It's recommended to run the script in a
 freshly installed FreeBSD and nuke it afterwards.
 
