@@ -15,7 +15,7 @@
 
 set -ue
 
-readonly version=v2.1.1
+readonly version=v2.1.2
 readonly platforms='
   freebsd-amd64 linux-aarch64 linux-armv7l linux-i386 linux-i586 linux-i686 linux-x86_64 '
 
