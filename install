@@ -97,7 +97,7 @@ fi
 if command -v curl >/dev/null 2>&1; then
   curl -fsSLO -- "$url"
 elif command -v wget >/dev/null 2>&1; then
-  wget -- "$url"
+  wget ${quiet:+--quiet} -- "$url"
 else
   >&2 echo "[error] please install curl or wget and retry"
   exit 1
