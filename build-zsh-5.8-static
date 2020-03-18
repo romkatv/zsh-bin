@@ -68,12 +68,13 @@ image=
 
 while getopts ':m:c:i:h' opt "$@"; do
   case "$opt" in
-    h)  printf '%s\n' "$usage"; exit;;
     m)  arch=$OPTARG;;
     c)  cpu=$OPTARG;;
     i)  image=$OPTARG;;
+    h)  printf '%s\n' "$usage"; exit;;
     \?) >&2 echo "[error] invalid option: $OPTARG"           ; exit 1;;
     :)  >&2 echo "[error] missing required argument: $OPTARG"; exit 1;;
+    *)  >&2 echo "[internal error] unhandled option: $opt"   ; exit 1;;
   esac
 done
 
@@ -89,8 +90,8 @@ if [ -z "$cpu" ]; then
     x86_64)         cpu=x86-64;;
     i386|i586|i686) cpu=$arch;;
     *)
-      >&2 echo "[error] unable to infer target CPU architecture"
-      >&2 echo "please specify explicitly via -c"
+      >&2 echo '[error] unable to infer target CPU architecture'
+      >&2 echo 'Please specify explicitly with `-c CPU`.'
       exit 1
     ;;
   esac
@@ -103,8 +104,8 @@ if [ -z "$image" ]; then
     armv7l)         image=arm32v7/alpine:3.9.5;;
     aarch64)        image=arm64v8/alpine:3.9.5;;
     *)
-      >&2 echo "[error] unable to infer docker image"
-      >&2 echo "please specify explicitly via -i"
+      >&2 echo '[error] unable to infer docker image'
+      >&2 echo 'Please specify explicitly with `-i IMAGE`.'
       exit 1
     ;;
   esac
@@ -114,14 +115,21 @@ kernel=$(uname -s)
 kernel=$(printf '%s' "$kernel" | tr '[A-Z]' '[a-z]')
 
 if [ "$kernel" != linux ]; then
-  echo '[error] unsupported kernel, sorry!' >&2
+  >&2 echo '[error] unsupported kernel, sorry!'
   exit 1
 fi
 
 if ! command -v docker >/dev/null 2>&1; then
-  echo '[error] docker not found; please install and retry' >&2
+  >&2 echo '[error] docker not found; please install and retry'
   exit 1
 fi
+
+>&2 echo "Building zsh in docker..."
+>&2 echo ""
+>&2 echo "  IMAGE=$image"
+>&2 echo "  KERNEL=$kernel"
+>&2 echo "  ARCH=$arch"
+>&2 echo "  CPU=$cpu"
 
 build="$(cat <<\END
 apk update
@@ -247,7 +255,7 @@ cat >/"$name"/share/zsh/5.8/scripts/relocate <<-\END
 	set -ue
 
 	if [ $# -gt 2 ]; then
-	  echo 'usage: relocate [/path/to/root-dir] [/path/to/zsh]' >&2
+	  >&2 echo 'usage: relocate [/path/to/root-dir] [/path/to/zsh]'
 	  exit 1
 	fi
 
@@ -266,7 +274,7 @@ cat >/"$name"/share/zsh/5.8/scripts/relocate <<-\END
 	fi
 
 	if [ ! -x "$zsh" ]; then
-	  echo "[error] not an executable file: $zsh" >&2
+	  >&2 echo "[error] not an executable file: $zsh"
 	  exit 1
 	fi
 
@@ -274,18 +282,18 @@ cat >/"$name"/share/zsh/5.8/scripts/relocate <<-\END
 
 	# 4096 minus 23 for "share/zsh/5.8/functions"
 	if [ ${#root_dir} -gt 4073 ]; then
-	  echo "[error] directory name too long: $root_dir" >&2
+	  >&2 echo "[error] directory name too long: $root_dir"
 	  exit 1
 	fi
 
 	magic=iLWDLaG9dUlsxzEQp10k
 
 	if [ -z "${root_dir##*$magic*}" ]; then
-	  echo "[error] cannot relocate to this directory: $root_dir" >&2
+	  >&2 echo "[error] cannot relocate to this directory: $root_dir"
 	  exit 1
 	fi
 
-	echo "setting root directory for $(readlink -f "$zsh") => $root_dir" >&2
+	>&2 echo "setting root directory for $(readlink -f "$zsh") => $root_dir"
 
 	bin=$(LC_ALL=C tr -c '[:alnum:]:' ' ' <"$zsh")
 	cp -pf -- "$zsh" "$zsh".tmp
@@ -293,7 +301,7 @@ cat >/"$name"/share/zsh/5.8/scripts/relocate <<-\END
 	patch() {
 	  local prefix="${bin%:$magic:$1:*}"
 	  if [ "$prefix" = "$bin" ]; then
-	    echo "[error] not a relocatable zsh binary: $zsh" >&2
+	    >&2 echo "[error] not a relocatable zsh binary: $zsh"
 	    exit 1
 	  fi
 	  prefix="$prefix:$magic:$1:"
@@ -308,7 +316,7 @@ cat >/"$name"/share/zsh/5.8/scripts/relocate <<-\END
 
 	if ! fpath=$("$zsh".tmp -c 'print -r -- $fpath[1]') ||
 	   [ "${fpath#$root_dir}" = "$fpath" ]; then
-	  echo "[error] failed to relocate zsh" >&2
+	  >&2 echo "[error] failed to relocate zsh"
 	  exit 1
 	fi
 
