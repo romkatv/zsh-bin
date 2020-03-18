@@ -375,6 +375,11 @@ while getopts ':m:c:i:h' opt "$@"; do
   esac
 done
 
+if [ "$OPTIND" -le $# ]; then
+  >&2 echo "[error] unexpected positional argument"
+  return 1
+fi
+
 if [ -z "$arch" ]; then
   arch=$(uname -m)
   arch=$(printf '%s' "$arch" | tr '[A-Z]' '[a-z]')
