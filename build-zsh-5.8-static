@@ -292,7 +292,7 @@ cat >/"$name"/share/zsh/5.8/scripts/relocate <<-\END
 	  if ! err=$(dd if=/dev/zero of="$zsh".tmp bs=1 seek=${#prefix} count=4096 conv=notrunc 2>&1); then
 	    >&2 printf '%s\n' "$err"
 	    exit 1
-    fi
+	  fi
 	  if ! err=$(printf '%s' "$dir" |
 	               dd of="$zsh".tmp bs=1 seek=${#prefix} count=${#dir} conv=notrunc 2>&1); then
 	    >&2 printf '%s\n' "$err"
