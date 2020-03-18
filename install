@@ -1,0 +1,138 @@
+#!/bin/sh
+#
+# Usage: install [-d DIR] [-q]
+#
+# Download statically-linked, hermetic, relocatable Zsh 5.8
+# from https://github.com/romkatv/zsh-bin/releases and install
+# it to DIR.
+#
+# Options:
+#
+#   -d DIR  install to this directory; defaults to ~/.zsh-bin
+#   -q      don't produce any output on success
+
+{
+
+set -ue
+
+readonly version=v2.1.1
+readonly platforms='
+  freebsd-amd64 linux-aarch64 linux-armv7l linux-i386 linux-i586 linux-i686 linux-x86_64 '
+
+usage="$(cat <<\END
+Usage: install [-d DIR] [-q]
+
+Download statically-linked, hermetic, relocatable Zsh 5.8
+from https://github.com/romkatv/zsh-bin/releases and install
+it to DIR.
+
+Options:
+
+  -d DIR  install to this directory; defaults to ~/.zsh-bin
+  -q      don't produce any output on success
+END
+)"
+
+dir=
+quiet=
+
+while getopts ':d:qh' opt "$@"; do
+  case "$opt" in
+    d)  dir=$OPTARG;;
+    q)  quiet=1;;
+    h)  printf '%s\n' "$usage"; exit;;
+    \?) >&2 echo "[error] invalid option: $OPTARG"           ; exit 1;;
+    :)  >&2 echo "[error] missing required argument: $OPTARG"; exit 1;;
+    *)  >&2 echo "[internal error] unhandled option: $opt"   ; exit 1;;
+  esac
+done
+
+if [ "$OPTIND" -le $# ]; then
+  >&2 echo "[error] unexpected positional argument"
+  return 1
+fi
+
+dir="${dir:-$HOME/.zsh-bin}"
+
+if [ -e "$dir" ]; then
+  if [ ! -d "$dir" ]; then
+    >&2 echo "[error] not a directory: $dir"
+    exit 1
+  fi
+  files=$(ls -A -- "$dir")
+  if [ -n "$files" ]; then
+    >&2 echo "[error] directory exists and not empty: $dir"
+    exit 1
+  fi
+fi
+
+dir=$(readlink -f -- "$dir")
+kernel=$(uname -s | tr '[A-Z]' '[a-z]')
+arch=$(uname -m | tr '[A-Z]' '[a-z]')
+
+if [ -n "${platforms##* $kernel-$arch }" ]; then
+  >&2 echo "[error] there is no prebuilt binary for $kernel-$arch"
+  >&2 echo "See https://github.com/romkatv/zsh-bin#compiling if you'd"
+  >&2 echo "like to build it yourself."
+  exit 1
+fi
+
+name="zsh-5.8-${kernel}-${arch}-static"
+url="https://github.com/romkatv/zsh-bin/releases/download/${version}/${name}.tar.gz"
+
+cleanup() {
+  cd /
+  rm -rf -- "$dir".tmp.$$
+}
+
+rm -rf -- "$dir".tmp.$$
+mkdir -- "$dir".tmp.$$
+trap cleanup INT QUIT TERM EXIT ILL PIPE
+cd "$dir".tmp.$$
+
+if [ -z "$quiet" ]; then
+  echo "Downloading $url"
+fi
+
+if command -v curl >/dev/null 2>&1; then
+  curl -fsSLO -- "$url"
+elif command -v wget >/dev/null 2>&1; then
+  wget -- "$url"
+else
+  >&2 echo "[error] please install curl or wget and retry"
+  exit 1
+fi
+
+if [ -z "$quiet" ]; then
+  echo "Extracting files"
+fi
+
+tar -xzf "$name".tar.gz
+"$name"/share/zsh/5.8/scripts/relocate "$dir"
+
+if [ -z "$quiet" ]; then
+  echo "Moving files to $dir"
+fi
+
+[ "$dir" != / ]
+parent=$(dirname "$dir")
+mkdir -p -- "$parent"
+if [ -e "$dir" ]; then
+  rmdir -- "$dir"
+fi
+mv -- "$dir".tmp.$$/"$name" "$dir"
+
+cleanup
+
+if [ -z "$quiet" ]; then
+  echo ""
+  echo "Zsh 5.8 successfully installed to $dir"
+  echo ""
+  echo "To start zsh, type:"
+  echo ""
+  echo "  $dir/bin/zsh"
+  echo ""
+  echo "Consider adding $dir/bin to PATH for convenience."
+fi
+
+}
