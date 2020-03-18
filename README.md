@@ -19,7 +19,7 @@ cd ~/apps
 kernel=$(uname -s | tr '[A-Z]' '[a-z]')
 arch=$(uname -m | tr '[A-Z]' '[a-z]')
 name="zsh-5.8-${kernel}-${arch}-static"
-curl -fsSLO -- "https://github.com/romkatv/zsh-bin/releases/download/v1.0.0/${name}.tar.gz"
+curl -fsSLO -- "https://github.com/romkatv/zsh-bin/releases/download/v2.1.0/${name}.tar.gz"
 tar -xzf "$name".tar.gz
 "$name"/share/zsh/5.8/scripts/relocate
 rm -f "$name".tar.gz
