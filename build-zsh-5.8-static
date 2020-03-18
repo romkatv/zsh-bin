@@ -136,13 +136,6 @@ cd zsh-zsh-5.8
 name=zsh-5.8-"$ZSH_BIN_KERNEL"-"$ZSH_BIN_ARCH"-static
 
 ./Util/preconfig
-
-if [ "$ZSH_BIN_KERNEL" = linux ]; then
-  libc=--enable-libc-musl
-else
-  libc=
-fi
-
 ./configure                             \
   --prefix=/"$name"                     \
   --disable-etcdir                      \
