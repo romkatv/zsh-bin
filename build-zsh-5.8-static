@@ -18,8 +18,17 @@
 #   -i IMAGE  docker image used for building zsh; inferred from ARCH
 #             if not set explicitly
 #
-# Running ./build-zsh-5.8-static on x86_64 Linux will create
-# zsh-5.8-linux-x86_64-static.tar.gz in the current directory.
+# Running build-zsh-5.8-static on Linux will create
+# zsh-5.8-linux-${ARCH}-static.tar.gz in the current directory. The
+# built is done in an ephemeral Docker container, so no junk gets
+# left behind.
+#
+# Running build-zsh-5.8-static on FreeBSD will create
+# /out/zsh-5.8-freebsd-${ARCH}-static.tar.gz. Some junk will be left
+# in the home directory. It's recommended to run the script in a freshly
+# installed FreeBSD and nuke it afterwards.
+#
+# Other kernels are currently not supported.
 #
 # To install Zsh from the archive, copy it to the target
 # machine's home directory and run:
@@ -62,113 +71,62 @@ Options:
 END
 )"
 
-arch=
-cpu=
-image=
-
-while getopts ':m:c:i:h' opt "$@"; do
-  case "$opt" in
-    m)  arch=$OPTARG;;
-    c)  cpu=$OPTARG;;
-    i)  image=$OPTARG;;
-    h)  printf '%s\n' "$usage"; exit;;
-    \?) >&2 echo "[error] invalid option: $OPTARG"           ; exit 1;;
-    :)  >&2 echo "[error] missing required argument: $OPTARG"; exit 1;;
-    *)  >&2 echo "[internal error] unhandled option: $opt"   ; exit 1;;
-  esac
-done
-
-if [ -z "$arch" ]; then
-  arch=$(uname -m)
-  arch=$(printf '%s' "$arch" | tr '[A-Z]' '[a-z]')
-fi
-
-if [ -z "$cpu" ]; then
-  case "$arch" in
-    armv7l)         cpu=armv7;;
-    aarch64)        cpu=armv8-a;;
-    x86_64)         cpu=x86-64;;
-    i386|i586|i686) cpu=$arch;;
-    *)
-      >&2 echo '[error] unable to infer target CPU architecture'
-      >&2 echo 'Please specify explicitly with `-c CPU`.'
-      exit 1
-    ;;
-  esac
-fi
-
-if [ -z "$image" ]; then
-  case "$arch" in
-    x86_64)         image=alpine:3.9.5;;
-    i386|i586|i686) image=i386/alpine:3.9.5;;
-    armv7l)         image=arm32v7/alpine:3.9.5;;
-    aarch64)        image=arm64v8/alpine:3.9.5;;
-    *)
-      >&2 echo '[error] unable to infer docker image'
-      >&2 echo 'Please specify explicitly with `-i IMAGE`.'
-      exit 1
-    ;;
-  esac
-fi
-
-kernel=$(uname -s)
-kernel=$(printf '%s' "$kernel" | tr '[A-Z]' '[a-z]')
-
-if [ "$kernel" != linux ]; then
-  >&2 echo '[error] unsupported kernel, sorry!'
-  exit 1
-fi
-
-if ! command -v docker >/dev/null 2>&1; then
-  >&2 echo '[error] docker not found; please install and retry'
-  exit 1
-fi
-
->&2 echo "Building zsh in docker..."
->&2 echo ""
->&2 echo "  IMAGE=$image"
->&2 echo "  KERNEL=$kernel"
->&2 echo "  ARCH=$arch"
->&2 echo "  CPU=$cpu"
-
 build="$(cat <<\END
-apk update
-apk add          \
-  autoconf       \
-  bash           \
-  binutils       \
-  g++            \
-  gcc            \
-  gdbm-dev       \
-  groff          \
-  make           \
-  man            \
-  musl-dev       \
-  ncurses        \
-  ncurses-dev    \
-  ncurses-static \
-  pcre-dev       \
-  util-linux
+case "$ZSH_BIN_KERNEL" in
+  linux)
+    apk update
+    apk add          \
+      autoconf       \
+      bash           \
+      binutils       \
+      g++            \
+      gcc            \
+      gdbm-dev       \
+      groff          \
+      make           \
+      man            \
+      musl-dev       \
+      ncurses        \
+      ncurses-dev    \
+      ncurses-static \
+      pcre-dev       \
+      util-linux
 
-cd
-wget https://gitlab.com/fbb-git/icmake/-/archive/9.03.01/icmake-9.03.01.tar.gz
-tar -xzf icmake-9.03.01.tar.gz
-cd icmake-9.03.01/icmake
-./icm_prepare /
-./icm_bootstrap x
-./icm_install all
+    cd
+    wget https://gitlab.com/fbb-git/icmake/-/archive/9.03.01/icmake-9.03.01.tar.gz
+    tar -xzf icmake-9.03.01.tar.gz
+    cd icmake-9.03.01/icmake
+    ./icm_prepare /
+    ./icm_bootstrap x
+    ./icm_install all
 
-cd
-wget https://gitlab.com/fbb-git/yodl/-/archive/4.02.01/yodl-4.02.01.tar.gz
-tar -xzf yodl-4.02.01.tar.gz
-cd yodl-4.02.01/yodl
-mkdir ../fake-bin
-touch ../fake-bin/tput
-chmod +x ../fake-bin/tput
-PATH="$PWD/../fake-bin:$PATH" ./build programs
-PATH="$PWD/../fake-bin:$PATH" ./build macros
-PATH="$PWD/../fake-bin:$PATH" ./build install programs /
-PATH="$PWD/../fake-bin:$PATH" ./build install macros /
+    cd
+    wget https://gitlab.com/fbb-git/yodl/-/archive/4.02.01/yodl-4.02.01.tar.gz
+    tar -xzf yodl-4.02.01.tar.gz
+    cd yodl-4.02.01/yodl
+    mkdir ../fake-bin
+    touch ../fake-bin/tput
+    chmod +x ../fake-bin/tput
+    PATH="$PWD/../fake-bin:$PATH" ./build programs
+    PATH="$PWD/../fake-bin:$PATH" ./build macros
+    PATH="$PWD/../fake-bin:$PATH" ./build install programs /
+    PATH="$PWD/../fake-bin:$PATH" ./build install macros /
+  ;;
+  freebsd)
+    pkg install -y \
+      autoconf     \
+      binutils     \
+      gcc          \
+      groff        \
+      ncurses      \
+      pcre         \
+      yodl
+  ;;
+  *)
+    >&2 echo "[internal error] unhandled kernel: $ZSH_BIN_KERNEL"
+    exit 1
+  ;;
+esac
 
 cd
 wget https://github.com/zsh-users/zsh/archive/zsh-5.8.tar.gz
@@ -178,22 +136,49 @@ cd zsh-zsh-5.8
 name=zsh-5.8-"$ZSH_BIN_KERNEL"-"$ZSH_BIN_ARCH"-static
 
 ./Util/preconfig
+
+if [ "$ZSH_BIN_KERNEL" = linux ]; then
+  libc=--enable-libc-musl
+else
+  libc=
+fi
+
 ./configure                             \
   --prefix=/"$name"                     \
   --disable-etcdir                      \
+  --disable-zshenv                      \
+  --disable-zshrc                       \
+  --disable-zlogin                      \
+  --disable-zprofile                    \
+  --disable-zlogout                     \
   --disable-site-fndir                  \
   --disable-site-scriptdir              \
-  --enable-zsh-secure-free              \
+  --enable-cap                          \
+  --with-tcsetpgrp                      \
   --disable-dynamic                     \
-  --enable-libc-musl                    \
   --enable-ldflags=-static              \
   --enable-cflags=-march="$ZSH_BIN_CPU" \
   --host="$ZSH_BIN_ARCH"                \
-  --enable-custom-patchlevel="$name"
+  --enable-custom-patchlevel="$name"    \
+  $libc
 
-sed 's/link=no/link=static/' -i config.modules
-sed '46i #include <math.h>' -i Src/params.c
-sed $'113i\\\t    cp -f ../zshpaths.h zshpaths.h.tmp; \\\\' -i Src/zsh.mdd
+sed_i() {
+  [ $# = 2 ]
+  local file=$2
+  sed "$@" >"$file".tmp
+  mv -- "$file".tmp "$file"
+}
+
+sed_i 's/link=no/link=static/' config.modules
+
+if [ "$ZSH_BIN_KERNEL" != linux ]; then
+  sed_i 's/attr.mdd link=static/attr.mdd link=no/' config.modules
+  sed_i 's/db_gdbm.mdd link=static/db_gdbm.mdd link=no/' config.modules
+fi
+
+sed_i '46i\
+#include <math.h>' Src/params.c
+sed_i 's|mv -f zshpaths.h.tmp zshpaths.h|cp -f ../zshpaths.h ./|' Src/zsh.mdd
 
 cat >zshpaths.h <<-\END
 	#define MODULE_DIR "/dev/null"
@@ -210,10 +195,10 @@ cat >zshpaths.h <<-\END
 	#define FPATH_DIR ((const char *)(tagged_fpath_dir + sizeof(FPATH_DIR_TAG) - 1))
 	#define TERMINFO_DIR ((const char *)(tagged_terminfo_dir + sizeof(TERMINFO_DIR_TAG) - 1))
 
-	extern int tgetent_with_env(char *, const char *);
+	extern int tgetent_with_env(char *, char *);
 	END
 
-sed 's/tgetent/tgetent_with_env/g' -i Src/init.c
+sed_i 's/tgetent/tgetent_with_env/g' Src/init.c
 
 cat >>Src/init.c <<-\END
 	volatile char tagged_script_dir[sizeof(SCRIPT_DIR_TAG) + 4096] = {
@@ -226,7 +211,7 @@ cat >>Src/init.c <<-\END
 	  TERMINFO_DIR_TAG "/usr/share/terminfo"
 	};
 
-	extern int tgetent_with_env(char *termbuf, const char *term) {
+	extern int tgetent_with_env(char *termbuf, char *term) {
 	  const char *orig;
 	  const char *patched;
 	  int res;
@@ -244,10 +229,17 @@ cat >>Src/init.c <<-\END
 	}
 	END
 
-make -j 20 install
+cpus=$(getconf _NPROCESSORS_ONLN) || cpus=$(sysctl -n hw.ncpu) || cpus=8
+
+make -j "$cpus" install
 strip -s /"$name"/bin/zsh
 rm /"$name"/bin/zsh-5.8
-cp -r /usr/share/terminfo /"$name"/share/
+
+if [ -d /usr/share/terminfo ]; then
+  cp -r /usr/share/terminfo /"$name"/share/
+else
+  cp /usr/local/share/misc/terminfo.db /"$name"/share/
+fi
 
 cat >/"$name"/share/zsh/5.8/scripts/relocate <<-\END
 	#!/bin/sh
@@ -332,9 +324,15 @@ chmod +x /"$name"/share/zsh/5.8/scripts/relocate
 tar -C / -pczf /out/tmp."$name".tar.gz "$name"
 mv -f -- /out/tmp."$name".tar.gz /out/"$name".tar.gz
 
+case "$ZSH_BIN_KERNEL" in
+  linux)   dir=.;;
+  freebsd) dir=/out;;
+  *) >&2 echo "[internal error] unhandled kernel: $ZSH_BIN_KERNEL"; exit 1;;
+esac
+
 cat >&2 <<-END
 	-------------------------------------------------
-	SUCCESS: created ./$name.tar.gz.
+	SUCCESS: created $dir/$name.tar.gz.
 
 	This archive contains statically-linked, hermetic,
 	relocatable Zsh 5.8. Installation of Zsh from the archive
@@ -363,11 +361,102 @@ cat >&2 <<-END
 END
 )"
 
-docker run                    \
-  -e ZSH_BIN_KERNEL="$kernel" \
-  -e ZSH_BIN_ARCH="$arch"     \
-  -e ZSH_BIN_CPU="$cpu"       \
-  -v "$PWD":/out              \
-  --tty                       \
-  --rm                        \
-  -- "$image" /bin/sh -uexc "$build"
+arch=
+cpu=
+image=
+
+while getopts ':m:c:i:h' opt "$@"; do
+  case "$opt" in
+    m)  arch=$OPTARG;;
+    c)  cpu=$OPTARG;;
+    i)  image=$OPTARG;;
+    h)  printf '%s\n' "$usage"; exit;;
+    \?) >&2 echo "[error] invalid option: $OPTARG"           ; exit 1;;
+    :)  >&2 echo "[error] missing required argument: $OPTARG"; exit 1;;
+    *)  >&2 echo "[internal error] unhandled option: $opt"   ; exit 1;;
+  esac
+done
+
+if [ -z "$arch" ]; then
+  arch=$(uname -m)
+  arch=$(printf '%s' "$arch" | tr '[A-Z]' '[a-z]')
+fi
+
+if [ -z "$cpu" ]; then
+  case "$arch" in
+    armv7l)         cpu=armv7;;
+    aarch64)        cpu=armv8-a;;
+    x86_64|amd64)   cpu=x86-64;;
+    i386|i586|i686) cpu=$arch;;
+    *)
+      >&2 echo '[error] unable to infer target CPU architecture'
+      >&2 echo 'Please specify explicitly with `-c CPU`.'
+      exit 1
+    ;;
+  esac
+fi
+
+kernel=$(uname -s)
+kernel=$(printf '%s' "$kernel" | tr '[A-Z]' '[a-z]')
+
+case "$kernel" in
+  linux)
+    if [ -z "$image" ]; then
+      case "$arch" in
+        x86_64)         image=alpine:3.9.5;;
+        i386|i586|i686) image=i386/alpine:3.9.5;;
+        armv7l)         image=arm32v7/alpine:3.9.5;;
+        aarch64)        image=arm64v8/alpine:3.9.5;;
+        *)
+          >&2 echo '[error] unable to infer docker image'
+          >&2 echo 'Please specify explicitly with `-i IMAGE`.'
+          exit 1
+        ;;
+      esac
+    fi
+    if ! command -v docker >/dev/null 2>&1; then
+      >&2 echo '[error] docker not found; please install and retry'
+      exit 1
+    fi
+  ;;
+  freebsd)
+    if [ -n "$image" ]; then
+      >&2 echo '[error] docker image (-i) is not supported on freebsd'
+      exit 1
+    fi
+  ;;
+  *)
+    >&2 echo '[error] unsupported kernel, sorry!'
+    exit 1
+  ;;
+esac
+
+>&2 echo "Building zsh..."
+>&2 echo ""
+[ -n "$image" ] && >&2 echo "  IMAGE=$image"
+>&2 echo "  KERNEL=$kernel"
+>&2 echo "  ARCH=$arch"
+>&2 echo "  CPU=$cpu"
+
+case "$kernel" in
+  linux)
+    docker run                    \
+      -e ZSH_BIN_KERNEL="$kernel" \
+      -e ZSH_BIN_ARCH="$arch"     \
+      -e ZSH_BIN_CPU="$cpu"       \
+      -v "$PWD":/out              \
+      --tty                       \
+      --rm                        \
+      -- "$image" /bin/sh -uexc "$build"
+  ;;
+  freebsd)
+    rm -rf /out
+    mkdir /out
+    ZSH_BIN_KERNEL="$kernel" ZSH_BIN_ARCH="$arch" ZSH_BIN_CPU="$cpu" \
+      /bin/sh -uexc "$build"
+  ;;
+  *)
+    >&2 echo "[internal error] unhandled kernel: $kernel";
+    exit 1
+  ;;
+esac

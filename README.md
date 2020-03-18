@@ -11,28 +11,29 @@
 
 ## Installation
 
-To install Zsh on x86_64 Linux box without root access, run the following commands:
+To install Zsh on a FreeBSD or Linux box without root access, run the following commands:
 
 ```sh
 mkdir -p ~/apps
 cd ~/apps
-curl -fsSLO https://github.com/romkatv/zsh-bin/releases/download/v1.0.0/zsh-5.8-linux-x86_64-static.tar.gz
-tar -xzf zsh-5.8-linux-x86_64-static.tar.gz
-zsh-5.8-linux-x86_64-static/share/zsh/5.8/scripts/relocate
-rm -f zsh-5.8-linux-x86_64-static.tar.gz
+kernel=$(uname -s | tr '[A-Z]' '[a-z]')
+arch=$(uname -m | tr '[A-Z]' '[a-z]')
+name="zsh-5.8-${kernel}-${arch}-static"
+curl -fsSLO -- "https://github.com/romkatv/zsh-bin/releases/download/v1.0.0/${name}.tar.gz"
+tar -xzf "$name".tar.gz
+"$name"/share/zsh/5.8/scripts/relocate
+rm -f "$name".tar.gz
 ```
 
-*Note*: If there is no `curl` on your machine, try replacing `curl -fsSLO` with `wget`.
+*Tip*: If there is no `curl` on your machine, try replacing `curl -fsSLO` with `wget`.
 
-After that you can invoke `~/apps/zsh-5.8-linux-x86_64-static/bin/zsh` and it'll just work,
-although you'll probably want to add `~/apps/zsh-5.8-linux-x86_64-static/bin` to `PATH` for
-convenience.
+After that you can invoke `~/apps/${name}/bin/zsh` and it'll just work. You'll probably want
+to add `~/apps/${name}/bin` to `PATH` for convenience.
 
-Zsh won't read or write any files outside of its installation directory --
-`~/apps/zsh-5.8-linux-x86_64-static` in the example above -- with the exception of per-user rc files
-such as `${ZDOTDIR:-~}/.zshrc`. If you move or rename this directory, you'll need to call
-`share/zsh/5.8/scripts/relocate/relocate` afterwards. This script reconfigures Zsh so that it loads
-builtin functions from the new location.
+Zsh won't read or write any files outside of its installation directory -- `~/apps/${name}` in the
+example above -- with the exception of per-user rc files such as `${ZDOTDIR:-~}/.zshrc`. If you move
+or rename this directory, you'll need to call `share/zsh/5.8/scripts/relocate/relocate` afterwards.
+This script reconfigures Zsh so that it loads builtin functions from the new location.
 
 ## Compiling
 
@@ -42,12 +43,20 @@ cd zsh-bin
 ./build-zsh-5.8-static
 ```
 
-The build script requires Docker and internet connection.
+`build-zsh-5.8-static` has a few options you might want to override. `build-zsh-5.8-static -h` will
+list them.
 
-If everything goes well, `zsh-5.8-linux-x86_64-static.tar.gz` will appear in the current directory.
-This archive contains statically-linked, hermetic, relocatable Zsh 5.8. Installation of Zsh from the
-archive doesn't require libc, terminfo, ncurses or root access. As long as the target machine has a
-compatible CPU and Linux kernel, it'll work.
+On Linux build is done in a Docker container, so you'll need to install docker first. If everything
+goes well, `zsh-5.8-linux-${ARCH}-static.tar.gz` will appear in the current directory.
+
+
+On FreeBSD build is done on host. On success, `zsh-5.8-freebsd-${ARCH}-static.tar.gz` is placed
+in `/out` and some junk is left over in the home directory. It's recommended to run the script in a
+freshly installed FreeBSD and nuke it afterwards.
+
+The archive produced by the build script contains statically-linked, hermetic, relocatable Zsh 5.8.
+Installation of Zsh from the archive doesn't require libc, terminfo, ncurses or root access. As long
+as the target machine has a compatible CPU and kernel, it'll work.
 
 You can find built archives in [releases](https://github.com/romkatv/zsh-bin/releases).
 
@@ -132,10 +141,10 @@ echo "$new_fpath_dir" | dd of="$zsh" bs=1 seek=${#prefix} count=${#dir} conv=not
 
 ## Supported platforms
 
-`build-zsh-5.8-static` has been tested only x86_64 Linux. In theory it should work with other
-popular CPU architectures. There is currently no support for kernels other than Linux.
+The build script currently works on Linux and FreeBSD. Prebuilt archives for popular CPU
+architectures can be found in [releases](https://github.com/romkatv/zsh-bin/releases).
 
-You cannot run the build script on WSL but you can use `zsh-5.8-linux-x86_64-static.tar.gz` there.
+You can use `zsh-5.8-linux-x86_64-static.tar.gz` on WSL but you cannot run the build script there.
 
 ## Why?
 
