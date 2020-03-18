@@ -11,29 +11,42 @@
 
 ## Installation
 
-To install Zsh on a FreeBSD or Linux box without root access, run the following commands:
+To install Zsh on a FreeBSD or Linux box without root access, run the following command:
 
 ```sh
-mkdir -p ~/apps
-cd ~/apps
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/romkatv/zsh-bin/master/install)"
+```
+
+Or, if you don't have `curl`:
+
+```sh
+sh -c "$(wget -O- https://raw.githubusercontent.com/romkatv/zsh-bin/master/install)"
+```
+
+Or, if you prefer, follow [manual installation](#manual-installation) instructions.
+
+Now you can invoke `~/.zsh-bin/bin/zsh` and it'll just work. You'll probably want to add
+`~/.zsh-bin/bin` to `PATH` for convenience.
+
+*Tip*: Append `-- -d /some/dir` to the installation command to install Zsh to an alternative
+directory.
+
+### Manual installation
+
+```sh
 kernel=$(uname -s | tr '[A-Z]' '[a-z]')
 arch=$(uname -m | tr '[A-Z]' '[a-z]')
 name="zsh-5.8-${kernel}-${arch}-static"
 curl -fsSLO -- "https://github.com/romkatv/zsh-bin/releases/download/v2.1.1/${name}.tar.gz"
 tar -xzf "$name".tar.gz
-"$name"/share/zsh/5.8/scripts/relocate
-rm -f "$name".tar.gz
+rm "$name".tar.gz
+rm -rf ~/.zsh-bin
+mv "$name" ~/.zsh-bin
+~/.zsh-bin/share/zsh/5.8/scripts/relocate
 ```
 
-*Tip*: If there is no `curl` on your machine, try replacing `curl -fsSLO` with `wget`.
-
-After that you can invoke `~/apps/${name}/bin/zsh` and it'll just work. You'll probably want
-to add `~/apps/${name}/bin` to `PATH` for convenience.
-
-Zsh won't read or write any files outside of its installation directory -- `~/apps/${name}` in the
-example above -- with the exception of per-user rc files such as `${ZDOTDIR:-~}/.zshrc`. If you move
-or rename this directory, you'll need to call `share/zsh/5.8/scripts/relocate/relocate` afterwards.
-This script reconfigures Zsh so that it loads builtin functions from the new location.
+If you move or rename `~/.zsh-bin`, you'll need to call `share/zsh/5.8/scripts/relocate/relocate`
+afterwards. See the last line in the instructions above.
 
 ## Compiling
 
