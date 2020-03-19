@@ -114,12 +114,8 @@ if [ -z "$quiet" ]; then
   echo "Moving files to $dir"
 fi
 
-[ "$dir" != / ]
-parent=$(dirname "$dir")
-mkdir -p -- "$parent"
-if [ -e "$dir" ]; then
-  rmdir -- "$dir"
-fi
+mkdir -p -- "$dir"
+rmdir -- "$dir"
 mv -- "$dir".tmp.$$/"$name" "$dir"
 
 cleanup
