@@ -191,10 +191,10 @@ configs from the local machine to remote. Here's the gist of it:
 
 set -ueo pipefail
 dump=$(tar -C ~ -pcz -- .bashrc admin-scripts | base64)
-ssh -t "$@" 'echo "'$dump'" | base64 -d | tar -C ~ -pxz  && exec bash -il'
+ssh -t "$@" "echo '$dump'" | base64 -d | tar -C ~ -pxz  && exec bash -il'
 ```
 
-It archives a few local files and then runs a command over SSH. This command extracts files from
+It archives a few local files and runs a command over SSH. This command extracts files from
 the archive and starts Bash. Pretty simple.
 
 I'm using Zsh locally but Bash remotely. I don't install Zsh on servers as it's not necessary for
