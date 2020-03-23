@@ -16,8 +16,19 @@
 set -ue
 
 readonly version=v2.1.2
+
 readonly platforms='
-  freebsd-amd64 linux-aarch64 linux-armv7l linux-i386 linux-i586 linux-i686 linux-x86_64 '
+  <freebsd-amd64>
+  <linux-aarch64>
+  <linux-armv7l>
+  <linux-i386>
+  <linux-i586>
+  <linux-i686>
+  <linux-x86_64>
+  <cygwin_nt-10.0-i686>
+  <cygwin_nt-10.0-x86_64>
+  <msys_nt-10.0-i686>
+  <msys_nt-10.0-x86_64>'
 
 usage="$(cat <<\END
 Usage: install [-d DIR] [-q]
@@ -70,8 +81,19 @@ dir=$(readlink -f -- "$dir")
 kernel=$(uname -s | tr '[A-Z]' '[a-z]')
 arch=$(uname -m | tr '[A-Z]' '[a-z]')
 
-if [ -n "${platforms##* $kernel-$arch }" ]; then
-  >&2 echo "[error] there is no prebuilt binary for $kernel-$arch"
+case "$kernel" in
+  msys_nt-6.*)     kernel=msys_nt-10.0;;
+  msys_nt-10.*)    kernel=msys_nt-10.0;;
+  mingw32_nt-6.*)  kernel=msys_nt-10.0;;
+  mingw32_nt-10.*) kernel=msys_nt-10.0;;
+  mingw64_nt-6.*)  kernel=msys_nt-10.0;;
+  mingw64_nt-10.*) kernel=msys_nt-10.0;;
+  cygwin_nt-6.*)   kernel=cygwin_nt-10.0;;
+  cygwin_nt-10.*)  kernel=cygwin_nt-10.0;;
+esac
+
+if [ -n "${platforms##*<$kernel-$arch>}" ]; then
+  >&2 echo "[error] there is no prebuilt binary for your architecture"
   >&2 echo "See https://github.com/romkatv/zsh-bin#compiling if you'd"
   >&2 echo "like to build it yourself."
   exit 1
