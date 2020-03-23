@@ -1,0 +1,15 @@
+Set-MpPreference -DisableRealtimeMonitoring $true
+
+https://www.msys2.org/
+
+pacman -Sy --noconfirm binutils autoconf make gcc ncurses-devel groff pcre-devel yodl man
+
+ZSH_BIN_KERNEL=msys_nt-10.0
+ZSH_BIN_ARCH=x86_64
+ZSH_BIN_CPU=x86-64
+
+name=zsh-5.8-"$ZSH_BIN_KERNEL"-"$ZSH_BIN_ARCH"-static
+
+sed_i 's/\(\$(LN_S).*\);/( cd -- $(DESTDIR)$(runhelpdir) \&\& \1; );/' Doc/Makefile.in
+
+deref=
