@@ -66,8 +66,8 @@ case "$ZSH_BIN_KERNEL" in
     chmod +x ../fake-bin/tput
     PATH="$PWD/../fake-bin:$PATH" ./build programs
     PATH="$PWD/../fake-bin:$PATH" ./build macros
-    PATH="$PWD/../fake-bin:$PATH" ./build install programs /
-    PATH="$PWD/../fake-bin:$PATH" ./build install macros /
+    PATH="$PWD/../fake-bin:$PATH" ./build install programs
+    PATH="$PWD/../fake-bin:$PATH" ./build install macros
   ;;
   freebsd)
     pkg install -y \
