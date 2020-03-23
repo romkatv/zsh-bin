@@ -1,23 +1,255 @@
-Set-MpPreference -DisableRealtimeMonitoring $true
+TODO:
+
+- try iconv on linux and freebsd
+- always put files in the local directory (add workdir=$PWD at the top and cd into it)
+- truncate windows version from $kernel in the build script (but keep major version and don't change mingw to msys)
+- install yodl only if it's not available
+- build on macOS
+
+Disable Windows Defender from Powershell running under Administrator:
+
+  Set-MpPreference -DisableRealtimeMonitoring $true
 
 ------------------------
 
 https://www.msys2.org/
 
-pacman -Sy --noconfirm binutils autoconf make gcc ncurses-devel groff pcre-devel yodl man
+pacman -Sy --noconfirm binutils autoconf make gcc ncurses-devel groff pcre-devel yodl man libiconv-devel
 
 ZSH_BIN_KERNEL=msys_nt-10.0
 ZSH_BIN_ARCH=x86_64
 ZSH_BIN_CPU=x86-64
-
 name=zsh-5.8-"$ZSH_BIN_KERNEL"-"$ZSH_BIN_ARCH"-static
-
-sed_i 's/\(\$(LN_S).*\);/( cd -- $(DESTDIR)$(runhelpdir) \&\& \1; );/' Doc/Makefile.in
-
-deref=
 
 ------------------------
 
 https://cygwin.com/install.html
 
+There is libpcre-devel but it doesn't have a static library. So no zsh/pcre on cygwin, at least for now.
+
+packages:
+  bash
+  dash
+  autoconf
+  binutils
+  gcc-core
+  gcc-g++
+  groff
+  make
+  libncurses-devel
+  libiconv-devel
+  util-linux
+  tar
+  wget
+
+cd
+wget https://gitlab.com/fbb-git/icmake/-/archive/9.03.01/icmake-9.03.01.tar.gz
+tar -xzf icmake-9.03.01.tar.gz
+cd icmake-9.03.01/icmake
+./icm_prepare /
+./icm_bootstrap x
+./icm_install all
+
+cd
+wget https://gitlab.com/fbb-git/yodl/-/archive/4.02.01/yodl-4.02.01.tar.gz
+tar -xzf yodl-4.02.01.tar.gz
+cd yodl-4.02.01/yodl
+mkdir ../fake-bin
+touch ../fake-bin/tput
+chmod +x ../fake-bin/tput
+PATH="$PWD/../fake-bin:$PATH" ./build programs
+PATH="$PWD/../fake-bin:$PATH" ./build macros
+PATH="$PWD/../fake-bin:$PATH" ./build install programs
+PATH="$PWD/../fake-bin:$PATH" ./build install macros
+
+ZSH_BIN_KERNEL=$(uname -s)
+ZSH_BIN_KERNEL=$(printf '%s' "$ZSH_BIN_KERNEL" | tr '[A-Z]' '[a-z]')
+ZSH_BIN_ARCH=$(uname -m)
+ZSH_BIN_ARCH=$(printf '%s' "$ZSH_BIN_ARCH" | tr '[A-Z]' '[a-z]')
+ZSH_BIN_CPU=$(printf '%s' "$ZSH_BIN_ARCH" | tr '_' '-')
+
+cd
+wget https://github.com/zsh-users/zsh/archive/zsh-5.8.tar.gz
+tar -xzf zsh-5.8.tar.gz
+cd zsh-zsh-5.8
+
+name=zsh-5.8-"$ZSH_BIN_KERNEL"-"$ZSH_BIN_ARCH"-static
+
+./Util/preconfig
+./configure                             \
+  --prefix=/"$name"                     \
+  --disable-etcdir                      \
+  --disable-zshenv                      \
+  --disable-zshrc                       \
+  --disable-zlogin                      \
+  --disable-zprofile                    \
+  --disable-zlogout                     \
+  --disable-site-fndir                  \
+  --disable-site-scriptdir              \
+  --enable-cap                          \
+  --with-tcsetpgrp                      \
+  --disable-dynamic                     \
+  --enable-ldflags='-static'            \
+  --enable-cflags=-march="$ZSH_BIN_CPU" \
+  --host="$ZSH_BIN_ARCH"                \
+  --enable-custom-patchlevel="$name"
+
+sed_i() {
+  [ $# = 2 ] || return
+  local file=$2
+  sed "$@" >"$file".tmp || return
+  mv -- "$file".tmp "$file"
+}
+
+sed_i 's/link=no/link=static/' config.modules
+
+sed_i 's/db_gdbm.mdd link=static/db_gdbm.mdd link=no/' config.modules
+sed_i 's/pcre.mdd link=static/pcre.mdd link=no/' config.modules
+
+sed_i '46i\
+#include <math.h>' Src/params.c
+
+sed_i 's|mv -f zshpaths.h.tmp zshpaths.h|cp -f ../zshpaths.h ./|' Src/zsh.mdd
+
+sed_i 's/\(\$(LN_S).*\);/( cd -- $(DESTDIR)$(runhelpdir) \&\& \1; );/' Doc/Makefile.in
+
+cat >zshpaths.h <<\END
+#define MODULE_DIR "/dev/null"
+#define SCRIPT_DIR_TAG ":iLWDLaG9dUlsxzEQp10k:script:"
+#define FPATH_DIR_TAG ":iLWDLaG9dUlsxzEQp10k:fpath:"
+#define TERMINFO_DIR_TAG ":iLWDLaG9dUlsxzEQp10k:terminfo:"
+extern volatile char tagged_script_dir[sizeof(SCRIPT_DIR_TAG) + 4096];
+extern volatile char tagged_fpath_dir[sizeof(FPATH_DIR_TAG) + 4096];
+extern volatile char tagged_terminfo_dir[sizeof(TERMINFO_DIR_TAG) + 4096];
+#define SCRIPT_DIR ((const char *)(tagged_script_dir + sizeof(SCRIPT_DIR_TAG) - 1))
+#define FPATH_DIR ((const char *)(tagged_fpath_dir + sizeof(FPATH_DIR_TAG) - 1))
+#define TERMINFO_DIR ((const char *)(tagged_terminfo_dir + sizeof(TERMINFO_DIR_TAG) - 1))
+extern int tgetent_with_env(char *, char *);
+END
+
+sed_i 's/tgetent/tgetent_with_env/g' Src/init.c
+
+cat >>Src/init.c <<\END
+volatile char tagged_script_dir[sizeof(SCRIPT_DIR_TAG) + 4096] = {
+  SCRIPT_DIR_TAG "/usr/share/zsh/5.8/scripts"
+};
+volatile char tagged_fpath_dir[sizeof(FPATH_DIR_TAG) + 4096] = {
+  FPATH_DIR_TAG "/usr/share/zsh/5.8/functions"
+};
+volatile char tagged_terminfo_dir[sizeof(TERMINFO_DIR_TAG) + 4096] = {
+  TERMINFO_DIR_TAG "/usr/share/terminfo"
+};
+extern int tgetent_with_env(char *termbuf, char *term) {
+  const char *orig;
+  const char *patched;
+  int res;
+  orig = getenv("TERMINFO_DIRS");
+  patched = orig ? tricat(orig, ":", TERMINFO_DIR) : TERMINFO_DIR;
+  setenv("TERMINFO_DIRS", patched, 1);  /* ignore ENOMEM */
+  res = tgetent(termbuf, term);
+  if (orig) {
+    zsfree((char *)patched);
+    setenv("TERMINFO_DIRS", orig, 1);  /* ignore ENOMEM */
+  } else {
+    unsetenv("TERMINFO_DIRS");
+  }
+  return res;
+}
+END
+
+cpus=$(getconf _NPROCESSORS_ONLN) || cpus=$(sysctl -n hw.ncpu) || cpus=8
+make -j "$cpus" install
+strip -s /"$name"/bin/zsh
+rm /"$name"/bin/zsh-5.8
+
+if [ -d /usr/share/terminfo ]; then
+  cp -r /usr/share/terminfo /"$name"/share/
+else
+  cp /usr/local/share/misc/terminfo.db /"$name"/share/
+fi
+
+cat >/"$name"/share/zsh/5.8/scripts/relocate <<\END
+#!/bin/sh
+set -ue
+if [ $# -gt 2 ]; then
+  >&2 echo 'usage: relocate [/path/to/root-dir] [/path/to/zsh]'
+  exit 1
+fi
+if [ $# -ge 1 ]; then
+  root_dir=$(readlink -f -- "$1")
+else
+  self_dir=$(dirname -- "$0")
+  root_dir=$(readlink -f -- "$self_dir"/../../../..)
+fi
+if [ $# -ge 2 ]; then
+  zsh=$2
+else
+  self_dir=$(dirname -- "$0")
+  zsh="$self_dir"/../../../../bin/zsh
+fi
+if [ ! -x "$zsh" ]; then
+  >&2 echo "[error] not an executable file: $zsh"
+  exit 1
+fi
+root_dir="${root_dir%/}/"
+# 4096 minus 23 for "share/zsh/5.8/functions"
+if [ ${#root_dir} -gt 4073 ]; then
+  >&2 echo "[error] directory name too long: $root_dir"
+  exit 1
+fi
+magic=iLWDLaG9dUlsxzEQp10k
+if [ -z "${root_dir##*$magic*}" ]; then
+  >&2 echo "[error] cannot relocate to this directory: $root_dir"
+  exit 1
+fi
+cp -pf -- "$zsh" "$zsh".tmp
+patch() {
+  local pos
+  pos=$(
+    LC_ALL=C tr -c '[:alnum:]:' ' ' <"$zsh" |
+      grep -o ".*:$magic:$1:"               |
+      tr -d '\n'                            |
+      wc -c)
+  if [ "$pos" = 0 ]; then
+    >&2 echo "[error] not a relocatable zsh binary: $zsh"
+    exit 1
+  fi
+  if LC_ALL=C tr -c '[:alnum:]:' ' ' <"$zsh" |
+     head -c $((pos-1))                      |
+     grep -qF ":$magic:$1:"; then
+    >&2 echo "[error] not a relocatable zsh binary: $zsh"
+    exit 1
+  fi
+  local dir="${root_dir}$2" err
+  if ! err=$(dd if=/dev/zero of="$zsh".tmp bs=1 seek="$pos" count=4096 conv=notrunc 2>&1); then
+    >&2 printf '%s\n' "$err"
+    exit 1
+  fi
+  if ! err=$(printf '%s' "$dir" |
+               dd of="$zsh".tmp bs=1 seek="$pos" count=${#dir} conv=notrunc 2>&1); then
+    >&2 printf '%s\n' "$err"
+    exit 1
+  fi
+}
+patch script   share/zsh/5.8/scripts
+patch fpath    share/zsh/5.8/functions
+patch terminfo share/terminfo
+if ! fpath=$("$zsh".tmp -c 'print -r -- $fpath[1]') ||
+   [ "${fpath#$root_dir}" = "$fpath" ]; then
+  >&2 echo "[error] failed to relocate zsh"
+  exit 1
+fi
+mv -f -- "$zsh".tmp "$zsh"
+END
+
+chmod +x /"$name"/share/zsh/5.8/scripts/relocate
+/"$name"/share/zsh/5.8/scripts/relocate
+/"$name"/bin/zsh -ec 'zmodload zsh/zselect; autoload -Uz add-zsh-hook; add-zsh-hook precmd x'
+/"$name"/share/zsh/5.8/scripts/relocate /usr
+
+deref=
+
+mkdir -p /out
+tar -C / $deref -pczf /out/tmp."$name".tar.gz "$name"
+mv -f -- /out/tmp."$name".tar.gz /out/"$name".tar.gz
 
