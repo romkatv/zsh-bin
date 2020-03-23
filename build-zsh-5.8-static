@@ -234,24 +234,27 @@ cat >/"$name"/share/zsh/5.8/scripts/relocate <<-\END
 	  exit 1
 	fi
 
-	bin=$(LC_ALL=C tr -c '[:alnum:]:' ' ' <"$zsh")
 	cp -pf -- "$zsh" "$zsh".tmp
 
 	patch() {
-	  local prefix="${bin%:$magic:$1:*}"
-	  if [ "$prefix" = "$bin" ]; then
+	  local pos
+	  pos=$(LC_ALL=C tr -c '[:alnum:]:' ' ' <"$zsh" | grep -o ".*:$magic:$1:" | wc -c)
+	  if [ "${pos:-0}" = 0 ]; then
 	    >&2 echo "[error] not a relocatable zsh binary: $zsh"
 	    exit 1
 	  fi
-	  prefix="$prefix:$magic:$1:"
-	  local dir="${root_dir}$2"
-	  local err
-	  if ! err=$(dd if=/dev/zero of="$zsh".tmp bs=1 seek=${#prefix} count=4096 conv=notrunc 2>&1); then
+	  pos=$((pos-1))
+	  if head -c "$pos" <"$zsh" | grep -q ":$magic:$1:."; then
+	    >&2 echo "[error] not a relocatable zsh binary: $zsh"
+	    exit 1
+	  fi
+	  local dir="${root_dir}$2" err
+	  if ! err=$(dd if=/dev/zero of="$zsh".tmp bs=1 seek="$pos" count=4096 conv=notrunc 2>&1); then
 	    >&2 printf '%s\n' "$err"
 	    exit 1
 	  fi
 	  if ! err=$(printf '%s' "$dir" |
-	               dd of="$zsh".tmp bs=1 seek=${#prefix} count=${#dir} conv=notrunc 2>&1); then
+	               dd of="$zsh".tmp bs=1 seek="$pos" count=${#dir} conv=notrunc 2>&1); then
 	    >&2 printf '%s\n' "$err"
 	    exit 1
 	  fi
