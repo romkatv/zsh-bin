@@ -1,0 +1,3 @@
+* text=auto
+/build-zsh-5.8-static text eol=lf
+/install text eol=lf
