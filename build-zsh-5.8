@@ -107,7 +107,6 @@ case "$ZSH_BIN_KERNEL" in
       binutils             \
       gcc                  \
       groff                \
-      libgdbm-devel        \
       libiconv-devel       \
       make                 \
       man                  \
@@ -197,9 +196,12 @@ sed_i() {
 sed_i 's/link=no/link=static/' config.modules
 
 case "$ZSH_BIN_KERNEL" in
-  linux|msys*|mingw*);;
+  linux);;
   freebsd)
     sed_i 's/attr.mdd link=static/attr.mdd link=no/' config.modules
+    sed_i 's/db_gdbm.mdd link=static/db_gdbm.mdd link=no/' config.modules
+  ;;
+  msys*|mingw*)
     sed_i 's/db_gdbm.mdd link=static/db_gdbm.mdd link=no/' config.modules
   ;;
   cygwin*)
