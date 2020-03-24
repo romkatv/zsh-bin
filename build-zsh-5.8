@@ -167,6 +167,19 @@ cd zsh-zsh-5.8
 
 name=zsh-5.8-"$ZSH_BIN_KERNEL"-"$ZSH_BIN_ARCH"
 
+case "$ZSH_BIN_KERNEL" in
+  linux|freebsd|msys*|mingw*)
+    extra='--enable-libs=-lpcre'
+  ;;
+  cygwin*)
+    extra=
+  ;;
+  *)
+    >&2 echo "[internal error] unhandled kernel: $ZSH_BIN_KERNEL"
+    exit 1
+  ;;
+esac
+
 ./Util/preconfig
 ./configure                             \
   --prefix=/"$name"                     \
@@ -184,7 +197,8 @@ name=zsh-5.8-"$ZSH_BIN_KERNEL"-"$ZSH_BIN_ARCH"
   --enable-ldflags=-static              \
   --enable-cflags=-march="$ZSH_BIN_CPU" \
   --host="$ZSH_BIN_ARCH"                \
-  --enable-custom-patchlevel="$name"
+  --enable-custom-patchlevel="$name"    \
+  $extra
 
 sed_i() {
   [ $# = 2 ]
@@ -287,7 +301,7 @@ cat >/"$name"/share/zsh/5.8/scripts/relocate <<-\END
 
 	set -ue
 
-	magic=@ZSH_BIN_MAGIC@
+	magic='@ZSH_BIN_MAGIC@'
 	fpath_pos=@ZSH_BIN_FPATH_POS@
 	script_pos=@ZSH_BIN_SCRIPT_POS@
 	terminfo_pos=@ZSH_BIN_TERMINFO_POS@
