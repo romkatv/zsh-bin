@@ -392,7 +392,7 @@ embed_pos() {
     (( $#parts == 2 ))
     print -r -- $#parts[1]'
   local pos
-  pos=$(/"$name"/bin/zsh -uec "$cmd" /"$name"/bin/zsh ":$magic:$1:")
+  pos=$(/"$name"/bin/zsh -fuec "$cmd" /"$name"/bin/zsh ":$magic:$1:")
   printf '%s' "$pos" | grep -qxE '[0-9]+'
   local upper
   upper=$(printf '%s' "$1" | tr '[a-z]' '[A-Z]')
