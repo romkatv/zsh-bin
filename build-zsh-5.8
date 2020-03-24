@@ -182,7 +182,7 @@ esac
 
 ./Util/preconfig
 ./configure                             \
-  --prefix=/"$name"                     \
+  --prefix="$workdir/$name"             \
   --disable-etcdir                      \
   --disable-zshenv                      \
   --disable-zshrc                       \
@@ -201,10 +201,14 @@ esac
   $extra
 
 sed_i() {
-  [ $# = 2 ]
-  local file=$2
-  sed "$@" >"$file".tmp
-  mv -- "$file".tmp "$file"
+  [ $# -gt 1 ]
+  local script=$1
+  while [ $# != 1 ]; do
+    shift
+    local file=$1
+    sed "$script" "$file" >"$file".tmp
+    mv -- "$file".tmp "$file"
+  done
 }
 
 sed_i 's/link=no/link=static/' config.modules
@@ -287,16 +291,22 @@ cat >zshpaths.h <<-\END
 sed_i "s/@ZSH_BIN_MAGIC@/$magic/g" zshpaths.h
 
 make -j "$cpus" install
-strip -s /"$name"/bin/zsh
-rm /"$name"/bin/zsh-5.8
+strip -s "$workdir/$name"/bin/zsh
+rm "$workdir/$name"/bin/zsh-5.8
 
 if [ -d /usr/share/terminfo ]; then
-  cp -r /usr/share/terminfo /"$name"/share/
+  cp -r /usr/share/terminfo "$workdir/$name"/share/
 else
-  cp /usr/local/share/misc/terminfo.db /"$name"/share/
+  cp /usr/local/share/misc/terminfo.db "$workdir/$name"/share/
 fi
 
-cat >/"$name"/share/zsh/5.8/scripts/relocate <<-\END
+sed_i 's/local HELPDIR=.*/[[ -n "${HELPDIR:-}" ]] || local HELPDIR="$(<<\\'"$magic"'\
+'"$magic"'\
+)"/'                                                 \
+  "$workdir/$name"/share/zsh/5.8/functions/run-help  \
+  "$workdir/$name"/share/zsh/5.8/functions/_run-help
+
+cat >"$workdir/$name"/share/zsh/5.8/scripts/relocate <<-\END
 	#!/bin/sh
 
 	set -ue
@@ -306,46 +316,114 @@ cat >/"$name"/share/zsh/5.8/scripts/relocate <<-\END
 	script_pos=@ZSH_BIN_SCRIPT_POS@
 	terminfo_pos=@ZSH_BIN_TERMINFO_POS@
 
-	if [ $# -gt 2 ]; then
-	  >&2 echo 'usage: relocate [/path/to/root-dir] [/path/to/zsh]'
+	usage="$(cat <<-\USAGE
+		Usage: relocate [-s SRC] [-d DST]
+
+		Modifies hard-coded paths within Zsh residing in directory SRC
+		so that they point to directory DST.
+
+		The source directory must exist but the destination directory
+		doesn't have to.
+
+		Options:
+
+		  -s SRC  directory where Zsh is currently installed; this is the
+		          directory with `bin` and `usr` as subdirectories; if not
+		          specified, this directory is automatically derived from
+	          path to `relocate`
+		  -d DST  directory from which Zsh will be used; this is the
+		          directory with `bin` and `usr` as subdirectories; if not
+		          specified, this directory is automatically derived from
+		          path to `relocate`
+		USAGE
+	)"
+
+	src=
+	dst=
+
+	while getopts ':s:d:h' opt "$@"; do
+	  case "$opt" in
+	    s)  src=$OPTARG;;
+	    d)  dst=$OPTARG;;
+	    h)  printf '%s\n' "$usage"; exit;;
+	    \?) >&2 echo "[error] invalid option: $OPTARG"           ; exit 1;;
+	    :)  >&2 echo "[error] missing required argument: $OPTARG"; exit 1;;
+	    *)  >&2 echo "[internal error] unhandled option: $opt"   ; exit 1;;
+	  esac
+	done
+
+	if [ "$OPTIND" -le $# ]; then
+	  >&2 echo "[error] unexpected positional argument"
+	  return 1
+	fi
+
+	if [ -n "$src" ]; then
+	  src=$(readlink -f -- "$src")
+	else
+	  self_dir=$(dirname -- "$0")
+	  src=$(readlink -f -- "$self_dir"/../../../..)
+	fi
+
+	if [ -n "$dst" ]; then
+	  dst=$(readlink -f -- "$dst")
+	else
+	  self_dir=$(dirname -- "$0")
+	  dst=$(readlink -f -- "$self_dir"/../../../..)
+	fi
+
+	if [ ! -d "$src" ]; then
+	  >&2 echo "[error] not a directory: $src"
 	  exit 1
 	fi
 
-	if [ $# -ge 1 ]; then
-	  root_dir=$(readlink -f -- "$1")
-	else
-	  self_dir=$(dirname -- "$0")
-	  root_dir=$(readlink -f -- "$self_dir"/../../../..)
-	fi
-
-	if [ $# -ge 2 ]; then
-	  zsh=$2
-	else
-	  self_dir=$(dirname -- "$0")
-	  zsh="$self_dir"/../../../../bin/zsh
-	fi
+	zsh="$src"/bin/zsh
+	runhelp="$src"/share/zsh/5.8/functions/run-help
+	runhelpcomp="$src"/share/zsh/5.8/functions/_run-help
 
 	if [ ! -x "$zsh" ]; then
 	  >&2 echo "[error] not an executable file: $zsh"
 	  exit 1
 	fi
 
-	root_dir="${root_dir%/}/"
-
-	# 4096 minus 23 for "share/zsh/5.8/functions"
-	if [ ${#root_dir} -gt 4073 ]; then
-	  >&2 echo "[error] directory name too long: $root_dir"
+	if ! grep -qF 'local HELPDIR' -- "$runhelp"; then
+	  >&2 echo "[error] cannot relocate zsh from this directory: $src"
 	  exit 1
 	fi
 
-	if [ -z "${root_dir##*$magic*}" ]; then
-	  >&2 echo "[error] cannot relocate to this directory: $root_dir"
+	if ! grep -qF 'local HELPDIR' -- "$runhelpcomp"; then
+	  >&2 echo "[error] cannot relocate zsh from this directory: $src"
+	  exit 1
+	fi
+
+	dst="${dst%/}/"
+
+	# 4096 minus 23 for "share/zsh/5.8/functions"
+	if [ ${#dst} -gt 4073 ]; then
+	  >&2 echo "[error] directory name too long: $dst"
+	  exit 1
+	fi
+
+	if [ -z "${dst##*$magic*}" ]; then
+	  >&2 echo "[error] cannot relocate to this directory: $dst"
 	  exit 1
 	fi
 
 	cp -pf -- "$zsh" "$zsh".tmp
 
-	patch() {
+	patch_help() {
+	  local data
+	  data=$(cat -- "$1")
+	  local prefix="${data%%$magic*}"
+	  local suffix="${data##*$magic}"
+	  if [ "$prefix" = "$data" -o "$suffix" = "$data" ]; then
+	    >&2 echo "[error] not a relocatable zsh directory: $src"
+	    exit 1
+	  fi
+	  local dir="$dst"/share/zsh/5.8/help
+	  printf '%s\n%s\n%s\n' "$prefix$magic" "$dir" "$magic$suffix" >"$1".tmp
+	}
+
+	patch_bin() {
 	  local header_len=$((1 + ${#magic} + 1 + ${#2} + 1))
 	  local header
 	  if ! header=$(dd if="$zsh" bs=1 skip="$1" count="$header_len" 2>/dev/null); then
@@ -357,7 +435,7 @@ cat >/"$name"/share/zsh/5.8/scripts/relocate <<-\END
 	  fi
 
 	  local pos=$(($1 + header_len))
-	  local dir="${root_dir}$3"
+	  local dir="${dst}$3"
 	  local err
 	  if ! err=$(dd if=/dev/zero of="$zsh".tmp bs=1 seek="$pos" count=4096 conv=notrunc 2>&1); then
 	    >&2 printf '%s\n' "$err"
@@ -370,20 +448,25 @@ cat >/"$name"/share/zsh/5.8/scripts/relocate <<-\END
 	  fi
 	}
 
-	patch "$fpath_pos"    fpath    share/zsh/5.8/functions
-	patch "$script_pos"   script   share/zsh/5.8/scripts
-	patch "$terminfo_pos" terminfo share/terminfo
+	patch_help "$runhelp"
+	patch_help "$runhelpcomp"
+
+	patch_bin "$fpath_pos"    fpath    share/zsh/5.8/functions
+	patch_bin "$script_pos"   script   share/zsh/5.8/scripts
+	patch_bin "$terminfo_pos" terminfo share/terminfo
 
 	if ! fpath=$("$zsh".tmp -c 'print -r -- $fpath[1]') ||
-	   [ "${fpath#$root_dir}" = "$fpath" ]; then
+	   [ "${fpath#$dst}" = "$fpath" ]; then
 	  >&2 echo "[error] failed to relocate zsh"
 	  exit 1
 	fi
 
 	mv -f -- "$zsh".tmp "$zsh"
+	mv -f -- "$runhelp".tmp "$runhelp"
+	mv -f -- "$runhelpcomp".tmp "$runhelpcomp"
 	END
 
-sed_i "s/@ZSH_BIN_MAGIC@/$magic/g" /"$name"/share/zsh/5.8/scripts/relocate
+sed_i "s/@ZSH_BIN_MAGIC@/$magic/g" "$workdir/$name"/share/zsh/5.8/scripts/relocate
 
 embed_pos() {
   local cmd='
@@ -392,22 +475,22 @@ embed_pos() {
     (( $#parts == 2 ))
     print -r -- $#parts[1]'
   local pos
-  pos=$(/"$name"/bin/zsh -fuec "$cmd" /"$name"/bin/zsh ":$magic:$1:")
+  pos=$("$workdir/$name"/bin/zsh -fuec "$cmd" "$workdir/$name"/bin/zsh ":$magic:$1:")
   printf '%s' "$pos" | grep -qxE '[0-9]+'
   local upper
   upper=$(printf '%s' "$1" | tr '[a-z]' '[A-Z]')
-  sed_i "s/@ZSH_BIN_${upper}_POS@/$pos/g" /"$name"/share/zsh/5.8/scripts/relocate
+  sed_i "s/@ZSH_BIN_${upper}_POS@/$pos/g" "$workdir/$name"/share/zsh/5.8/scripts/relocate
 }
 
 embed_pos fpath
 embed_pos script
 embed_pos terminfo
 
-chmod +x /"$name"/share/zsh/5.8/scripts/relocate
+chmod +x "$workdir/$name"/share/zsh/5.8/scripts/relocate
 
-/"$name"/share/zsh/5.8/scripts/relocate
-/"$name"/bin/zsh -ec 'zmodload zsh/zselect; autoload -Uz add-zsh-hook; add-zsh-hook precmd x'
-/"$name"/share/zsh/5.8/scripts/relocate /usr
+"$workdir/$name"/share/zsh/5.8/scripts/relocate
+"$workdir/$name"/bin/zsh -fec 'zmodload zsh/stat; autoload -Uz add-zsh-hook; add-zsh-hook precmd x'
+"$workdir/$name"/share/zsh/5.8/scripts/relocate -d /usr
 
 case "$ZSH_BIN_KERNEL" in
   linux)
@@ -422,7 +505,7 @@ case "$ZSH_BIN_KERNEL" in
   ;;
 esac
 
-tar -C / $deref -pczf "$outdir"/tmp."$name".tar.gz "$name"
+tar -C "$workdir" $deref -pczf "$outdir"/tmp."$name".tar.gz "$name"
 mv -f -- "$outdir"/tmp."$name".tar.gz "$outdir"/"$name".tar.gz
 
 cleanup
