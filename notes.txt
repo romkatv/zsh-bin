@@ -1,6 +1,7 @@
 TODO:
 
 - build on macOS
+- rename build script to `build`
 
 Disable Windows Defender from Powershell running under Administrator:
 
@@ -27,6 +28,7 @@ packages:
   make
   libncurses-devel
   libiconv-devel
-  util-linux
+  perl
   tar
+  util-linux
   wget
