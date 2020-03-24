@@ -1,14 +1,14 @@
 #!/bin/sh
 #
-# Usage: ./build-zsh-5.8-static [-m ARCH] [-c CPU] [-i IMAGE]
+# Usage: ./build-zsh-5.8 [-m ARCH] [-c CPU] [-i IMAGE]
 #
-# Type `./build-zsh-5.8-static -h` for help and see
+# Type `./build-zsh-5.8 -h` for help and see
 # https://github.com/romkatv/zsh-bin for full documentation.
 
 set -ue
 
 usage="$(cat <<\END
-Usage: ./build-zsh-5.8-static [-m ARCH] [-c CPU] [-i IMAGE]
+Usage: ./build-zsh-5.8 [-m ARCH] [-c CPU] [-i IMAGE]
 
 Creates an archive containing statically-linked, hermetic,
 relocatable Zsh 5.8. Installation of Zsh from the archive
@@ -29,6 +29,31 @@ END
 )"
 
 build="$(cat <<\END
+outdir=$(pwd)
+if command -v mktemp >/dev/null 2>&1; then
+  workdir=$(mktemp -d "${TMPDIR:-/tmp}"/zsh-bin.XXXXXXXXXX)
+else
+  workdir="${TMPDIR:-/tmp}/zsh-bin.$$"
+  mkdir -- "$workdir"
+fi
+workdir=$(readlink -f -- "$workdir")
+cleanup() {
+  cd /
+  rm -rf -- "$workdir"
+}
+trap cleanup INT QUIT TERM EXIT ILL PIPE
+
+libiconv_version=1.16
+icmake_version=9.03.01
+yodl_version=4.02.01
+libiconv_url=https://ftp.gnu.org/pub/gnu/libiconv/libiconv-$libiconv_version.tar.gz
+icmake_url=https://gitlab.com/fbb-git/icmake/-/archive/$icmake_version/icmake-$icmake_version.tar.gz
+yodl_url=https://gitlab.com/fbb-git/yodl/-/archive/$yodl_version/yodl-$yodl_version.tar.gz
+zsh_url1=https://github.com/zsh-users/zsh/archive/zsh-5.8.tar.gz
+zsh_url2=https://codeload.github.com/zsh-users/zsh/tar.gz/zsh-5.8
+
+cpus=$(getconf _NPROCESSORS_ONLN) || cpus=$(sysctl -n hw.ncpu) || cpus=8
+
 case "$ZSH_BIN_KERNEL" in
   linux)
     apk update
@@ -36,6 +61,7 @@ case "$ZSH_BIN_KERNEL" in
       autoconf       \
       bash           \
       binutils       \
+      file           \
       g++            \
       gcc            \
       gdbm-dev       \
@@ -47,27 +73,22 @@ case "$ZSH_BIN_KERNEL" in
       ncurses-dev    \
       ncurses-static \
       pcre-dev       \
-      util-linux     \
-      tar
-    cd
-    wget https://gitlab.com/fbb-git/icmake/-/archive/9.03.01/icmake-9.03.01.tar.gz
-    tar -xzf icmake-9.03.01.tar.gz
-    cd icmake-9.03.01/icmake
-    ./icm_prepare /
-    ./icm_bootstrap x
-    ./icm_install all
+      tar            \
+      util-linux
 
-    cd
-    wget https://gitlab.com/fbb-git/yodl/-/archive/4.02.01/yodl-4.02.01.tar.gz
-    tar -xzf yodl-4.02.01.tar.gz
-    cd yodl-4.02.01/yodl
-    mkdir ../fake-bin
-    touch ../fake-bin/tput
-    chmod +x ../fake-bin/tput
-    PATH="$PWD/../fake-bin:$PATH" ./build programs
-    PATH="$PWD/../fake-bin:$PATH" ./build macros
-    PATH="$PWD/../fake-bin:$PATH" ./build install programs
-    PATH="$PWD/../fake-bin:$PATH" ./build install macros
+      cd -- "$workdir"
+      wget -- "$libiconv_url"
+      tar -xzf libiconv-"$libiconv_version".tar.gz
+      cd libiconv-"$libiconv_version"
+      ./configure                     \
+        --prefix=/usr                 \
+        --disable-dependency-tracking \
+        --enable-static               \
+        --disable-shared              \
+        --enable-extra-encodings      \
+        --disable-rpath               \
+        --enable-relocatable
+      make -j "$cpus" install
   ;;
   freebsd)
     pkg install -y \
@@ -75,9 +96,38 @@ case "$ZSH_BIN_KERNEL" in
       binutils     \
       gcc          \
       groff        \
+      libiconv     \
       ncurses      \
       pcre         \
       yodl
+  ;;
+  msys*|mingw*)
+    pacman -Sy --noconfirm \
+      autoconf             \
+      binutils             \
+      gcc                  \
+      groff                \
+      libgdbm-devel        \
+      libiconv-devel       \
+      make                 \
+      man                  \
+      ncurses-devel        \
+      pcre-devel           \
+      yodl
+  ;;
+  cygwin*)
+    for cmd in autoconf bash colcrt gcc g++ groff ld make tar wget; do
+      if ! command -v "$cmd" >/dev/null 2>&1; then
+        >&2 echo "[error] command not found: $cmd"
+        exit 1
+      fi
+    done
+    for file in /usr/lib/libiconv.a /usr/lib/libncursesw.a /usr/share/terminfo; do
+      if [ ! -e "$file" ]; then
+        >&2 echo "[error] not found: $file"
+        exit 1
+      fi
+    done
   ;;
   *)
     >&2 echo "[internal error] unhandled kernel: $ZSH_BIN_KERNEL"
@@ -85,12 +135,38 @@ case "$ZSH_BIN_KERNEL" in
   ;;
 esac
 
-cd
-wget https://github.com/zsh-users/zsh/archive/zsh-5.8.tar.gz
+if ! command -v yodl >/dev/null 2>&1; then
+  if ! command -v icmake >/dev/null 2>&1; then
+    cd -- "$workdir"
+    wget -- "$icmake_url"
+    tar -xzf icmake-"$icmake_version".tar.gz
+    cd icmake-"$icmake_version"/icmake
+    ./icm_prepare /
+    ./icm_bootstrap x
+    ./icm_install all
+  fi
+
+  cd -- "$workdir"
+  wget -- "$yodl_url"
+  tar -xzf yodl-"$yodl_version".tar.gz
+  cd yodl-"$yodl_version"/yodl
+  mkdir ../fake-bin
+  touch ../fake-bin/tput
+  chmod +x ../fake-bin/tput
+  PATH="$workdir/yodl-$yodl_version/fake-bin:$PATH" ./build programs
+  PATH="$workdir/yodl-$yodl_version/fake-bin:$PATH" ./build macros
+  PATH="$workdir/yodl-$yodl_version/fake-bin:$PATH" ./build install programs
+  PATH="$workdir/yodl-$yodl_version/fake-bin:$PATH" ./build install macros
+fi
+
+cd -- "$workdir"
+if ! wget -O zsh-5.8.tar.gz -- "$zsh_url1"; then
+  wget -O zsh-5.8.tar.gz "$zsh_url2"
+fi
 tar -xzf zsh-5.8.tar.gz
 cd zsh-zsh-5.8
 
-name=zsh-5.8-"$ZSH_BIN_KERNEL"-"$ZSH_BIN_ARCH"-static
+name=zsh-5.8-"$ZSH_BIN_KERNEL"-"$ZSH_BIN_ARCH"
 
 ./Util/preconfig
 ./configure                             \
@@ -120,32 +196,28 @@ sed_i() {
 
 sed_i 's/link=no/link=static/' config.modules
 
-if [ "$ZSH_BIN_KERNEL" != linux ]; then
-  sed_i 's/attr.mdd link=static/attr.mdd link=no/' config.modules
-  sed_i 's/db_gdbm.mdd link=static/db_gdbm.mdd link=no/' config.modules
-fi
+case "$ZSH_BIN_KERNEL" in
+  linux|msys*|mingw*);;
+  freebsd)
+    sed_i 's/attr.mdd link=static/attr.mdd link=no/' config.modules
+    sed_i 's/db_gdbm.mdd link=static/db_gdbm.mdd link=no/' config.modules
+  ;;
+  cygwin*)
+    sed_i 's/db_gdbm.mdd link=static/db_gdbm.mdd link=no/' config.modules
+    sed_i 's/pcre.mdd link=static/pcre.mdd link=no/' config.modules
+  ;;
+  *)
+    >&2 echo "[internal error] unhandled kernel: $ZSH_BIN_KERNEL"
+    exit 1
+  ;;
+esac
+
+magic=iLWDLaG9dUlsxzEQp10k
 
 sed_i '46i\
 #include <math.h>' Src/params.c
 sed_i 's|mv -f zshpaths.h.tmp zshpaths.h|cp -f ../zshpaths.h ./|' Src/zsh.mdd
-
-cat >zshpaths.h <<-\END
-	#define MODULE_DIR "/dev/null"
-
-	#define SCRIPT_DIR_TAG ":iLWDLaG9dUlsxzEQp10k:script:"
-	#define FPATH_DIR_TAG ":iLWDLaG9dUlsxzEQp10k:fpath:"
-	#define TERMINFO_DIR_TAG ":iLWDLaG9dUlsxzEQp10k:terminfo:"
-
-	extern volatile char tagged_script_dir[sizeof(SCRIPT_DIR_TAG) + 4096];
-	extern volatile char tagged_fpath_dir[sizeof(FPATH_DIR_TAG) + 4096];
-	extern volatile char tagged_terminfo_dir[sizeof(TERMINFO_DIR_TAG) + 4096];
-
-	#define SCRIPT_DIR ((const char *)(tagged_script_dir + sizeof(SCRIPT_DIR_TAG) - 1))
-	#define FPATH_DIR ((const char *)(tagged_fpath_dir + sizeof(FPATH_DIR_TAG) - 1))
-	#define TERMINFO_DIR ((const char *)(tagged_terminfo_dir + sizeof(TERMINFO_DIR_TAG) - 1))
-
-	extern int tgetent_with_env(char *, char *);
-	END
+sed_i 's/\(\$(LN_S).*\);/( cd -- $(DESTDIR)$(runhelpdir) \&\& \1; );/' Doc/Makefile.in
 
 sed_i 's/tgetent/tgetent_with_env/g' Src/init.c
 
@@ -178,7 +250,25 @@ cat >>Src/init.c <<-\END
 	}
 	END
 
-cpus=$(getconf _NPROCESSORS_ONLN) || cpus=$(sysctl -n hw.ncpu) || cpus=8
+cat >zshpaths.h <<-\END
+	#define MODULE_DIR "/dev/null"
+
+	#define SCRIPT_DIR_TAG ":@ZSH_BIN_MAGIC@:script:"
+	#define FPATH_DIR_TAG ":@ZSH_BIN_MAGIC@:fpath:"
+	#define TERMINFO_DIR_TAG ":@ZSH_BIN_MAGIC@:terminfo:"
+
+	extern volatile char tagged_script_dir[sizeof(SCRIPT_DIR_TAG) + 4096];
+	extern volatile char tagged_fpath_dir[sizeof(FPATH_DIR_TAG) + 4096];
+	extern volatile char tagged_terminfo_dir[sizeof(TERMINFO_DIR_TAG) + 4096];
+
+	#define SCRIPT_DIR ((const char *)(tagged_script_dir + sizeof(SCRIPT_DIR_TAG) - 1))
+	#define FPATH_DIR ((const char *)(tagged_fpath_dir + sizeof(FPATH_DIR_TAG) - 1))
+	#define TERMINFO_DIR ((const char *)(tagged_terminfo_dir + sizeof(TERMINFO_DIR_TAG) - 1))
+
+	extern int tgetent_with_env(char *, char *);
+	END
+
+sed_i "s/@ZSH_BIN_MAGIC@/$magic/g" zshpaths.h
 
 make -j "$cpus" install
 strip -s /"$name"/bin/zsh
@@ -194,6 +284,11 @@ cat >/"$name"/share/zsh/5.8/scripts/relocate <<-\END
 	#!/bin/sh
 
 	set -ue
+
+	magic=@ZSH_BIN_MAGIC@
+	fpath_pos=@ZSH_BIN_FPATH_POS@
+	script_pos=@ZSH_BIN_SCRIPT_POS@
+	terminfo_pos=@ZSH_BIN_TERMINFO_POS@
 
 	if [ $# -gt 2 ]; then
 	  >&2 echo 'usage: relocate [/path/to/root-dir] [/path/to/zsh]'
@@ -227,8 +322,6 @@ cat >/"$name"/share/zsh/5.8/scripts/relocate <<-\END
 	  exit 1
 	fi
 
-	magic=iLWDLaG9dUlsxzEQp10k
-
 	if [ -z "${root_dir##*$magic*}" ]; then
 	  >&2 echo "[error] cannot relocate to this directory: $root_dir"
 	  exit 1
@@ -237,18 +330,19 @@ cat >/"$name"/share/zsh/5.8/scripts/relocate <<-\END
 	cp -pf -- "$zsh" "$zsh".tmp
 
 	patch() {
-	  local pos
-	  pos=$(LC_ALL=C tr -c '[:alnum:]:' ' ' <"$zsh" | grep -o ".*:$magic:$1:" | wc -c)
-	  if [ "${pos:-0}" = 0 ]; then
+	  local header_len=$((1 + ${#magic} + 1 + ${#2} + 1))
+	  local header
+	  if ! header=$(dd if="$zsh" bs=1 skip="$1" count="$header_len" 2>/dev/null); then
+	    header=$(dd if="$zsh" bs=1 skip="$1" count="$header_len")
+	  fi
+	  if [ "$header" != ":$magic:$2:" ]; then
 	    >&2 echo "[error] not a relocatable zsh binary: $zsh"
 	    exit 1
 	  fi
-	  pos=$((pos-1))
-	  if head -c "$pos" <"$zsh" | grep -q ":$magic:$1:."; then
-	    >&2 echo "[error] not a relocatable zsh binary: $zsh"
-	    exit 1
-	  fi
-	  local dir="${root_dir}$2" err
+
+	  local pos=$(($1 + header_len))
+	  local dir="${root_dir}$3"
+	  local err
 	  if ! err=$(dd if=/dev/zero of="$zsh".tmp bs=1 seek="$pos" count=4096 conv=notrunc 2>&1); then
 	    >&2 printf '%s\n' "$err"
 	    exit 1
@@ -260,9 +354,9 @@ cat >/"$name"/share/zsh/5.8/scripts/relocate <<-\END
 	  fi
 	}
 
-	patch script   share/zsh/5.8/scripts
-	patch fpath    share/zsh/5.8/functions
-	patch terminfo share/terminfo
+	patch "$fpath_pos"    fpath    share/zsh/5.8/functions
+	patch "$script_pos"   script   share/zsh/5.8/scripts
+	patch "$terminfo_pos" terminfo share/terminfo
 
 	if ! fpath=$("$zsh".tmp -c 'print -r -- $fpath[1]') ||
 	   [ "${fpath#$root_dir}" = "$fpath" ]; then
@@ -273,6 +367,26 @@ cat >/"$name"/share/zsh/5.8/scripts/relocate <<-\END
 	mv -f -- "$zsh".tmp "$zsh"
 	END
 
+sed_i "s/@ZSH_BIN_MAGIC@/$magic/g" /"$name"/share/zsh/5.8/scripts/relocate
+
+embed_pos() {
+  local cmd='
+    bin=$(LC_ALL=C tr -c "[:alnum:]:" " " <$0)
+    parts=("${(@ps:$1:)bin}")
+    (( $#parts == 2 ))
+    print -r -- $#parts[1]'
+  local pos
+  pos=$(/"$name"/bin/zsh -uec "$cmd" /"$name"/bin/zsh ":$magic:$1:")
+  printf '%s' "$pos" | grep -qxE '[0-9]+'
+  local upper
+  upper=$(printf '%s' "$1" | tr '[a-z]' '[A-Z]')
+  sed_i "s/@ZSH_BIN_${upper}_POS@/$pos/g" /"$name"/share/zsh/5.8/scripts/relocate
+}
+
+embed_pos fpath
+embed_pos script
+embed_pos terminfo
+
 chmod +x /"$name"/share/zsh/5.8/scripts/relocate
 
 /"$name"/share/zsh/5.8/scripts/relocate
@@ -280,34 +394,37 @@ chmod +x /"$name"/share/zsh/5.8/scripts/relocate
 /"$name"/share/zsh/5.8/scripts/relocate /usr
 
 case "$ZSH_BIN_KERNEL" in
-  linux)   deref=--hard-dereference;;
-  freebsd) deref=;;
-  *) >&2 echo "[internal error] unhandled kernel: $ZSH_BIN_KERNEL"; exit 1;;
+  linux)
+    deref=--hard-dereference
+  ;;
+  freebsd|msys*|mingw*|cygwin*)
+    deref=
+  ;;
+  *)
+    >&2 echo "[internal error] unhandled kernel: $ZSH_BIN_KERNEL"
+    exit 1
+  ;;
 esac
 
-tar -C / $deref -pczf /out/tmp."$name".tar.gz "$name"
-mv -f -- /out/tmp."$name".tar.gz /out/"$name".tar.gz
+tar -C / $deref -pczf "$outdir"/tmp."$name".tar.gz "$name"
+mv -f -- "$outdir"/tmp."$name".tar.gz "$outdir"/"$name".tar.gz
 
-case "$ZSH_BIN_KERNEL" in
-  linux)   dir=.;;
-  freebsd) dir=/out;;
-  *) >&2 echo "[internal error] unhandled kernel: $ZSH_BIN_KERNEL"; exit 1;;
-esac
+cleanup
 
 cat >&2 <<-END
 	-------------------------------------------------
-	SUCCESS: created $dir/$name.tar.gz.
+	SUCCESS: created ./$name.tar.gz.
 
 	This archive contains statically-linked, hermetic,
 	relocatable Zsh 5.8. Installation of Zsh from the archive
 	doesn't require libc, terminfo, ncurses or root access.
 	As long as the target machine has a compatible CPU and
-	Linux kernel, it'll work.
+	kernel, it'll work.
 
-	To install Zsh from the archive, copy it to the target
-	machine's home directory and run:
+	To install Zsh from the archive to ~/.zsh-bin, copy it to
+	the target machine's home directory and run:
 
-    cd
+	  cd
 	  rm -rf ~/.zsh-bin ~/$name
 	  tar -xzf ~/$name.tar.gz
 	  mv $name ~/.zsh-bin
@@ -394,6 +511,17 @@ case "$kernel" in
       exit 1
     fi
   ;;
+  msys_nt-*|mingw32_nt-*|mingw64_nt-*|cygwin_nt-*)
+    if ! printf '%s' "$kernel" | grep -Eqx '[^-]+-[0-9]+\.[0-9]+(-.*)?'; then
+      >&2 echo '[error] unsupported kernel, sorry!'
+      exit 1
+    fi
+    kernel=$(printf '%s' "$kernel" | sed 's/^\([^-]*-[0-9]*\.[0-9]*\).*/\1/')
+    if [ -n "$image" ]; then
+      >&2 echo '[error] docker image (-i) is not supported on windows'
+      exit 1
+    fi
+  ;;
   *)
     >&2 echo '[error] unsupported kernel, sorry!'
     exit 1
@@ -414,13 +542,12 @@ case "$kernel" in
       -e ZSH_BIN_ARCH="$arch"     \
       -e ZSH_BIN_CPU="$cpu"       \
       -v "$PWD":/out              \
+      -w /out                     \
       --tty                       \
       --rm                        \
       -- "$image" /bin/sh -uexc "$build"
   ;;
-  freebsd)
-    rm -rf /out
-    mkdir /out
+  freebsd|msys*|mingw*|cygwin*)
     ZSH_BIN_KERNEL="$kernel" ZSH_BIN_ARCH="$arch" ZSH_BIN_CPU="$cpu" \
       /bin/sh -uexc "$build"
   ;;

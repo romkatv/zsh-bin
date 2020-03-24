@@ -37,7 +37,7 @@ directory.
 ```sh
 kernel=$(uname -s | tr '[A-Z]' '[a-z]')
 arch=$(uname -m | tr '[A-Z]' '[a-z]')
-name="zsh-5.8-${kernel}-${arch}-static"
+name="zsh-5.8-${kernel}-${arch}"
 curl -fsSLO -- "https://github.com/romkatv/zsh-bin/releases/download/v2.1.2/${name}.tar.gz"
 tar -xzf "$name".tar.gz
 rm "$name".tar.gz
@@ -54,23 +54,19 @@ afterwards. See the last line in the instructions above.
 ```sh
 git clone https://github.com/romkatv/zsh-bin.git
 cd zsh-bin
-./build-zsh-5.8-static
+./build-zsh-5.8
 ```
 
-`build-zsh-5.8-static` has a few options you might want to override. `build-zsh-5.8-static -h` will
-list them.
+`build-zsh-5.8` has a few options you might want to override. `build-zsh-5.8 -h` will list them.
 
-On Linux build is done in a Docker container, so you'll need to install docker first. If everything
-goes well, `zsh-5.8-linux-${ARCH}-static.tar.gz` will appear in the current directory.
+On Linux build is done in a Docker container, so you'll need to install docker first. On non-Linux
+systems build is done on the host. In the latter case it's recommended to run the script in a
+freshly installed OS and nuke it afterwards.
 
-
-On FreeBSD build is done on the host. On success, `zsh-5.8-freebsd-${ARCH}-static.tar.gz` is placed
-in `/out` and some junk is left over in the home directory. It's recommended to run the script in a
-freshly installed FreeBSD and nuke it afterwards.
-
-The archive produced by the build script contains statically-linked, hermetic, relocatable Zsh 5.8.
-Installation of Zsh from the archive doesn't require libc, terminfo, ncurses or root access. As long
-as the target machine has a compatible CPU and kernel, it'll work.
+If everything goes well, `zsh-5.8-${KERNEL}-${ARCH}.tar.gz` will appear in the current directory.
+This archive contains statically-linked, hermetic, relocatable Zsh 5.8. Installation of Zsh from the
+archive doesn't require libc, terminfo, ncurses or root access. As long as the target machine has a
+compatible CPU and kernel, it'll work.
 
 You can find built archives in [releases](https://github.com/romkatv/zsh-bin/releases).
 
@@ -158,7 +154,7 @@ echo "$new_fpath_dir" | dd of="$zsh" bs=1 seek=${#prefix} count=${#dir} conv=not
 The build script currently works on Linux and FreeBSD. Prebuilt archives for popular CPU
 architectures can be found in [releases](https://github.com/romkatv/zsh-bin/releases).
 
-You can use `zsh-5.8-linux-x86_64-static.tar.gz` on WSL but you cannot run the build script there.
+You can use `zsh-5.8-linux-x86_64.tar.gz` on WSL but you cannot run the build script there.
 
 ## Why?
 

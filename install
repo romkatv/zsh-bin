@@ -15,7 +15,7 @@
 
 set -ue
 
-readonly version=v2.1.2
+readonly version=v3.0.0
 
 readonly platforms='
   <freebsd-amd64>
@@ -99,7 +99,7 @@ if [ -n "${platforms##*<$kernel-$arch>}" ]; then
   exit 1
 fi
 
-name="zsh-5.8-${kernel}-${arch}-static"
+name="zsh-5.8-${kernel}-${arch}"
 url="https://github.com/romkatv/zsh-bin/releases/download/${version}/${name}.tar.gz"
 
 cleanup() {

@@ -1,10 +1,7 @@
 TODO:
 
-- try iconv on linux and freebsd
-- always put files in the local directory (add workdir=$PWD at the top and cd into it)
-- truncate windows version from $kernel in the build script (but keep major version and don't change mingw to msys)
-- install yodl only if it's not available
 - build on macOS
+- rename the build script (drop "-static")
 
 Disable Windows Defender from Powershell running under Administrator:
 
