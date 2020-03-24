@@ -120,7 +120,7 @@ case "$ZSH_BIN_KERNEL" in
       groff        \
       libiconv     \
       ncurses      \
-      perl         \
+      perl5        \
       pcre         \
       yodl
   ;;
@@ -437,7 +437,7 @@ cat >"$workdir/$name"/share/zsh/5.8/scripts/relocate <<-\END
 	    >&2 echo "[error] not a relocatable zsh directory: $src"
 	    exit 1
 	  fi
-	  local dir="$dst"/share/zsh/5.8/help
+	  local dir="$dst"share/zsh/5.8/help
 	  printf '%s\n%s\n%s\n' "$prefix$magic" "$dir" "$magic$suffix" >"$1".tmp
 	}
 
