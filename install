@@ -1,57 +1,159 @@
 #!/bin/sh
 #
-# Usage: install [-d DIR] [-q]
+# Usage: install [-d DIR] [-q] [[-a ALGO]...]|[-f FILE]|[-u URL]
 #
-# Download statically-linked, hermetic, relocatable Zsh 5.8
-# from https://github.com/romkatv/zsh-bin/releases and install
-# it to DIR.
+# Download statically-linked, hermetic, relocatable Zsh 5.8 from
+# https://github.com/romkatv/zsh-bin/releases and install it to DIR.
 #
 # Options:
 #
-#   -d DIR  install to this directory; defaults to ~/.zsh-bin
-#   -q      don't produce any output on success
+#   -d DIR  Install to this directory. Defaults to ~/.zsh-bin.
+#
+#   -q      Don't produce any output on success.
+#
+#   -a ALGO Verify the integrity of the downloaded package with the specified
+#           algorithm. ALGO can be "sha256" or "md5". Cannot be used with `-f`
+#           and `-u`. This flag can be specified more than once. Installation
+#           script considers every algorithm in the listed order and stops once
+#           it finds one for which there is a local tool for performing the
+#           required integrity check. Installation is aborted if the signature
+#           of the downloaded archive doesn't match or if there is no local
+#           tool to perform this check for any of the specified algrithms.
+#
+#   -f FILE Install from a local file. FILE must point to *.tar.gz produced by
+#           the build script.
+#
+#   -u URL  Download the archive  from the specified location and install as
+#           usual. Must point to *.tar.gz produced by the build script.
 
 {
 
 set -ue
 
-readonly version=v3.0.0
+readonly url_base=https://github.com/romkatv/zsh-bin/releases/download/v3.0.0
 
-readonly platforms='
-  <freebsd-amd64>
-  <linux-aarch64>
-  <linux-armv7l>
-  <linux-i386>
-  <linux-i586>
-  <linux-i686>
-  <linux-x86_64>
-  <cygwin_nt-10.0-i686>
-  <cygwin_nt-10.0-x86_64>
-  <msys_nt-10.0-i686>
-  <msys_nt-10.0-x86_64>'
+readonly archives='
+file:zsh-5.8-freebsd-amd64.tar.gz;         md5:xxx; sha256:xxx;
+file:zsh-5.8-linux-aarch64.tar.gz
+file:zsh-5.8-linux-armv7l.tar.gz
+file:zsh-5.8-linux-i386.tar.gz
+file:zsh-5.8-linux-i586.tar.gz
+file:zsh-5.8-linux-i686.tar.gz
+file:zsh-5.8-linux-x86_64.tar.gz
+file:zsh-5.8-cygwin_nt-10.0-i686.tar.gz
+file:zsh-5.8-cygwin_nt-10.0-x86_64.tar.gz
+file:zsh-5.8-msys_nt-10.0-i686.tar.gz
+file:zsh-5.8-msys_nt-10.0-x86_64.tar.gz'
 
 usage="$(cat <<\END
-Usage: install [-d DIR] [-q]
+Usage: install [-d DIR] [-q] [[-a ALGO]...]|[-f FILE]|[-u URL]
 
-Download statically-linked, hermetic, relocatable Zsh 5.8
-from https://github.com/romkatv/zsh-bin/releases and install
-it to DIR.
+Download statically-linked, hermetic, relocatable Zsh 5.8 from
+https://github.com/romkatv/zsh-bin/releases and install it to DIR.
 
 Options:
 
-  -d DIR  install to this directory; defaults to ~/.zsh-bin
-  -q      don't produce any output on success
+  -d DIR  Install to this directory. Defaults to ~/.zsh-bin.
+
+  -q      Don't produce any output on success.
+
+  -a ALGO Verify the integrity of the downloaded package with the specified
+          algorithm. ALGO can be "sha256" or "md5". Cannot be used with `-f`
+          and `-u`. This flag can be specified more than once. Installation
+          script considers every algorithm in the listed order and stops once
+          it finds one for which there is a local tool for performing the
+          required integrity check. Installation is aborted if the signature
+          of the downloaded archive doesn't match or if there is no local
+          tool to perform this check for any of the specified algrithms.
+
+  -f FILE Install from a local file. FILE must point to *.tar.gz produced by
+          the build script.
+
+  -u URL  Download the archive  from the specified location and install as
+          usual. Must point to *.tar.gz produced by the build script.
 END
 )"
 
 dir=
 quiet=
+check_sha256=
+check_md5=
+url=
+file=
 
-while getopts ':d:qh' opt "$@"; do
+while getopts ':hqd:a:f:u:' opt "$@"; do
   case "$opt" in
-    d)  dir=$OPTARG;;
-    q)  quiet=1;;
-    h)  printf '%s\n' "$usage"; exit;;
+    h)
+      printf '%s\n' "$usage"
+      exit
+    ;;
+    q)
+      if [ -n "$quiet" ]; then
+        >&2 echo "[error] duplicate option: $opt"
+        exit 1
+      fi
+      quiet=1
+    ;;
+    d)
+      if [ -n "$dir" ]; then
+        >&2 echo "[error] duplicate option: $opt"
+        exit 1
+      fi
+      if [ -z "$OPTARG" ]; then
+        >&2 echo "[error] incorrect value of $opt: $OPTARG"
+        exit 1
+      fi
+      dir=$OPTARG
+    ;;
+    a)
+      case "$OPTARG" in
+        sha256)
+          if [ -n "$check_sha256" ]; then
+            >&2 echo "[error] duplicate option: $opt $OPTARG"
+            exit 1
+          fi
+          check_sha256=1
+        ;;
+        md5)
+          if [ -n "$check_md5" ]; then
+            >&2 echo "[error] duplicate option: $opt $OPTARG"
+            exit 1
+          fi
+          check_md5=1
+        ;;
+        *)
+          if [ -z "$OPTARG" ]; then
+            >&2 echo "[error] incorrect value of $opt: $OPTARG"
+            exit 1
+          fi
+        ;;
+      esac
+    ;;
+    f)
+      if [ -n "$file" ]; then
+        >&2 echo "[error] duplicate option: $opt"
+        exit 1
+      fi
+      if [ -z "$OPTARG" ]; then
+        >&2 echo "[error] incorrect value of $opt: $OPTARG"
+        exit 1
+      fi
+      if [ ! -e "$OPTARG" ] || ! file=$(readlink -f -- "$OPTARG"); then
+        >&2 echo "[error] file not found: $OPTARG"
+        exit 1
+      fi
+    ;;
+    u)
+      if [ -n "$url" ]; then
+        >&2 echo "[error] duplicate option: $opt"
+        exit 1
+      fi
+      if [ -z "$OPTARG" ]; then
+        >&2 echo "[error] incorrect value of $opt: $OPTARG"
+        exit 1
+      fi
+      url=$OPTARG
+    ;;
     \?) >&2 echo "[error] invalid option: $OPTARG"           ; exit 1;;
     :)  >&2 echo "[error] missing required argument: $OPTARG"; exit 1;;
     *)  >&2 echo "[internal error] unhandled option: $opt"   ; exit 1;;
@@ -63,7 +165,29 @@ if [ "$OPTIND" -le $# ]; then
   return 1
 fi
 
-dir="${dir:-$HOME/.zsh-bin}"
+if [ -n "$check_sha256" -o -n "$check_md5" ]; then
+  if [ -n "$file" ]; then
+    >&2 echo "[error] incompatible options: -f and -a"
+    exit 1
+  fi
+  if [ -n "$url" ]; then
+    >&2 echo "[error] incompatible options: -u and -a"
+    exit 1
+  fi
+fi
+
+if [ -n "$dir" ]; then
+  if [ -n "${dir##/*}" ]; then
+    >&2 echo "[error] path not absolute: $dir"
+    exit 1
+  fi
+else
+  if [ ${HOME:-x} = x -o -n "${HOME##/*}" ]; then
+    >&2 echo "[error] invalid HOME: ${HOME:-}"
+    exit 1
+  fi
+  dir="$HOME"/.zsh-bin
+fi
 
 if [ -e "$dir" ]; then
   if [ ! -d "$dir" ]; then
@@ -77,51 +201,124 @@ if [ -e "$dir" ]; then
   fi
 fi
 
-dir=$(readlink -f -- "$dir")
-kernel=$(uname -s | tr '[A-Z]' '[a-z]')
-arch=$(uname -m | tr '[A-Z]' '[a-z]')
-
-case "$kernel" in
-  msys_nt-6.*)     kernel=msys_nt-10.0;;
-  msys_nt-10.*)    kernel=msys_nt-10.0;;
-  mingw32_nt-6.*)  kernel=msys_nt-10.0;;
-  mingw32_nt-10.*) kernel=msys_nt-10.0;;
-  mingw64_nt-6.*)  kernel=msys_nt-10.0;;
-  mingw64_nt-10.*) kernel=msys_nt-10.0;;
-  cygwin_nt-6.*)   kernel=cygwin_nt-10.0;;
-  cygwin_nt-10.*)  kernel=cygwin_nt-10.0;;
-esac
-
-if [ -n "${platforms##*<$kernel-$arch>}" ]; then
-  >&2 echo "[error] there is no prebuilt binary for your architecture"
-  >&2 echo "See https://github.com/romkatv/zsh-bin#compiling if you'd"
-  >&2 echo "like to build it yourself."
-  exit 1
-fi
-
-name="zsh-5.8-${kernel}-${arch}"
-url="https://github.com/romkatv/zsh-bin/releases/download/${version}/${name}.tar.gz"
-
+tmpdir="$dir".tmp.$$
 cleanup() {
   cd /
-  rm -rf -- "$dir".tmp.$$
+  rm -rf -- "$tmpdir"
 }
-
-rm -rf -- "$dir".tmp.$$
-mkdir -- "$dir".tmp.$$
 trap cleanup INT QUIT TERM EXIT ILL PIPE
-cd "$dir".tmp.$$
 
-if [ -z "$quiet" ]; then
-  echo "Downloading $url"
+rm -rf -- "$tmpdir"
+mkdir -- "$tmpdir"
+cd -- "$tmpdir"
+
+if [ -z "$file" -a -z "$url" ]; then
+  kernel=$(uname -s | tr '[A-Z]' '[a-z]')
+  arch=$(uname -m | tr '[A-Z]' '[a-z]')
+
+  case "$kernel" in
+    msys_nt-6.*)     kernel=msys_nt-10.0;;
+    msys_nt-10.*)    kernel=msys_nt-10.0;;
+    mingw32_nt-6.*)  kernel=msys_nt-10.0;;
+    mingw32_nt-10.*) kernel=msys_nt-10.0;;
+    mingw64_nt-6.*)  kernel=msys_nt-10.0;;
+    mingw64_nt-10.*) kernel=msys_nt-10.0;;
+    cygwin_nt-6.*)   kernel=cygwin_nt-10.0;;
+    cygwin_nt-10.*)  kernel=cygwin_nt-10.0;;
+  esac
+
+  url="$url_base/zsh-5.8-${kernel}-${arch}.tar.gz"
+
+  if [ -n "${archives##*file:${url##*/};*}" ]; then
+    >&2 echo "[error] there is no prebuilt binary for your architecture"
+    >&2 echo "See https://github.com/romkatv/zsh-bin#compiling if you'd"
+    >&2 echo "like to build it yourself."
+    exit 1
+  fi
 fi
 
-if command -v curl >/dev/null 2>&1; then
-  curl -fsSLO -- "$url"
-elif command -v wget >/dev/null 2>&1; then
-  wget ${quiet:+--quiet} -- "$url"
-else
-  >&2 echo "[error] please install curl or wget and retry"
+if [ -n "$url" ]; then
+  if [ -z "$quiet" ]; then
+    echo "Downloading $url"
+  fi
+
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSLO -- "$url"
+  elif command -v wget >/dev/null 2>&1; then
+    wget ${quiet:+--quiet} -- "$url"
+  else
+    >&2 echo "[error] please install curl or wget and retry"
+    exit 1
+  fi
+
+  file="$tmpdir/${url##*/}"
+fi
+
+if [ -z "$quiet" ]; then
+  if [ -n "$check_sha256" -o -n "$check_md5" ]; then
+    echo "Verifying archive integrity"
+  fi
+fi
+
+if [ -n "$check_sha256" ]; then
+  sha256=none
+  if command -v shasum >/dev/null 2>/dev/null; then
+    sha256=$(shasum -b -a 512 -- "$file")
+    sha256=${sha256%% *}
+  elif command -v sha256sum >/dev/null 2>/dev/null; then
+    sha256=$(sha256sum -b -- "$file")
+    sha256=${sha256%% *}
+  elif command -v sha256 >/dev/null 2>/dev/null; then
+    hasher=$(command -v sha256)
+    hasher=$(readlink -f -- "$hasher" 2>/dev/null || true)
+    if [ "${hasher##*/}" != hashalot ]; then
+      sha256=$(sha256 -- "$file")
+      sha256=${sha256##* }
+    fi
+  fi
+  if [ "$sha256" != none ]; then
+    if [ -n "${archives##*sha256:$sha256;*}" ]; then
+      >&2 echo "[error] sha256 signature mismatch"
+      >&2 echo ""
+      >&2 echo "  file:   ${file##*/}"
+      >&2 echo "  sha256: ${sha256}"
+      exit 1
+    fi
+    if [ -z "$quiet" ]; then
+      echo "SHA256 signature matches"
+    fi
+    check_sha256=
+    check_md5=
+  fi
+fi
+
+if [ -n "$check_md5" ]; then
+  md5=none
+  if command -v md5sum >/dev/null 2>/dev/null; then
+    md5=$(md5sum -b -- "$file")
+    md5=${md5%% *}
+  elif command -v md5 >/dev/null 2>/dev/null; then
+    md5=$(md5 -- "$file")
+    md5=${md5##* }
+  fi
+  if [ "$md5" != none ]; then
+    if [ -n "${archives##*md5:$md5;*}" ]; then
+      >&2 echo "[error] md5 signature mismatch"
+      >&2 echo ""
+      >&2 echo "  file: ${file##*/}"
+      >&2 echo "  md5:  ${md5}"
+      exit 1
+    fi
+    if [ -z "$quiet" ]; then
+      echo "MD5 signature matches"
+    fi
+    check_sha256=
+    check_md5=
+  fi
+fi
+
+if [ -n "$check_sha256" -o -n "$check_md5" ]; then
+  >&2 echo "[error] unable to verify archive integrity: no suitable tools available"
   exit 1
 fi
 
@@ -129,8 +326,9 @@ if [ -z "$quiet" ]; then
   echo "Extracting files"
 fi
 
-tar -xzf "$name".tar.gz
-"$name"/share/zsh/5.8/scripts/relocate "$dir"
+tar -xzf "$file"
+base=$(basename "${file%.tar.gz}")
+"$base"/share/zsh/5.8/scripts/relocate -d "$dir"
 
 if [ -z "$quiet" ]; then
   echo "Moving files to $dir"
@@ -138,7 +336,7 @@ fi
 
 mkdir -p -- "$dir"
 rmdir -- "$dir"
-mv -- "$dir".tmp.$$/"$name" "$dir"
+mv -- "$tmpdir"/"$base" "$dir"
 
 cleanup
 
