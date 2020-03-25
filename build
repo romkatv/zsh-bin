@@ -375,23 +375,26 @@ cat >"$workdir/$name"/share/zsh/5.8/scripts/relocate <<-\END
 	  return 1
 	fi
 
-	if [ -n "$src" ]; then
-	  src=$(readlink -f -- "$src")
-	else
-	  self_dir=$(dirname -- "$0")
-	  src=$(readlink -f -- "$self_dir"/../../../..)
+	if [ -z "$src" ]; then
+	  src="$(dirname -- "$0")"/../../../..
+	fi
+
+	if [ ! -d "$src" ] || ! src=$(readlink -f -- "$src"); then
+	  >&2 echo "[error] not a directory: $src"
+	  exit 1
 	fi
 
 	if [ -n "$dst" ]; then
-	  dst=$(readlink -f -- "$dst")
+	  if [ -n "${dst##/*}" ]; then
+	    >&2 echo "[error] path not absolute: $dst"
+	    exit 1
+	  fi
 	else
-	  self_dir=$(dirname -- "$0")
-	  dst=$(readlink -f -- "$self_dir"/../../../..)
-	fi
-
-	if [ ! -d "$src" ]; then
-	  >&2 echo "[error] not a directory: $src"
-	  exit 1
+	  dst="$(dirname -- "$0")"/../../../..
+	  if [ ! -d "$dst" ] || ! dst=$(readlink -f -- "$dst"); then
+	    >&2 echo "[error] not a directory: $dst"
+	    exit 1
+	  fi
 	fi
 
 	zsh="$src"/bin/zsh
