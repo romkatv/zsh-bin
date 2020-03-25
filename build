@@ -12,9 +12,9 @@ Usage: build [-m ARCH] [-c CPU] [-i IMAGE]
 
 Creates an archive containing statically-linked, hermetic,
 relocatable Zsh 5.8. Installation of Zsh from the archive
-doesn't require libc, terminfo, ncurses or root access.
+does not require libc, terminfo, ncurses or root access.
 As long as the target machine has a compatible CPU and
-Linux kernel, it'll work.
+Linux kernel, it will work.
 
 Options:
 
@@ -30,13 +30,17 @@ END
 
 build="$(cat <<\END
 outdir=$(pwd)
+
 if command -v mktemp >/dev/null 2>&1; then
   workdir=$(mktemp -d "${TMPDIR:-/tmp}"/zsh-bin.XXXXXXXXXX)
 else
   workdir="${TMPDIR:-/tmp}/zsh-bin.$$"
   mkdir -- "$workdir"
 fi
-workdir=$(readlink -f -- "$workdir")
+
+cd -- "$workdir"
+workdir=$(pwd)
+
 cleanup() {
   cd /
   rm -rf -- "$workdir"
@@ -271,19 +275,34 @@ cat >>Src/init.c <<-\END
 	};
 
 	extern int tgetent_with_env(char *termbuf, char *term) {
-	  const char *orig;
-	  const char *patched;
 	  int res;
+	  int ev_len;
+	  char **ev;
+	  char *orig;
+	  char *patched;
 	  orig = getenv("TERMINFO_DIRS");
-	  patched = orig ? tricat(orig, ":", TERMINFO_DIR) : TERMINFO_DIR;
-	  setenv("TERMINFO_DIRS", patched, 1);  /* ignore ENOMEM */
+	  if (orig) {
+	    orig -= strlen("TERMINFO_DIRS") + 1;
+	    patched = tricat(orig, ":", TERMINFO_DIR);
+	    putenv(patched);  /* ignore ENOMEM */
+	  } else {
+	    patched = bicat("TERMINFO_DIRS=", TERMINFO_DIR);
+	    ev = environ;
+	    ev_len = arrlen(environ);
+	    environ = (char **)zalloc(sizeof(char *) * (ev_len + 2));
+	    memcpy(environ, ev, sizeof(char *) * ev_len);
+	    environ[ev_len] = patched;
+	    environ[ev_len + 1] = NULL;
+	  }
+	  
 	  res = tgetent(termbuf, term);
 	  if (orig) {
-	    zsfree((char *)patched);
-	    setenv("TERMINFO_DIRS", orig, 1);  /* ignore ENOMEM */
+	    putenv(orig);  /* ignore ENOMEM */
 	  } else {
-	    unsetenv("TERMINFO_DIRS");
+	    zfree(environ, sizeof(char *) * (ev_len + 2));
+	    environ = ev;
 	  }
+	  zsfree(patched);
 	  return res;
 	}
 	END
@@ -309,7 +328,7 @@ cat >zshpaths.h <<-\END
 sed_i "s/@ZSH_BIN_MAGIC@/$magic/g" zshpaths.h
 
 make -j "$cpus" install
-strip -s "$workdir/$name"/bin/zsh
+strip "$workdir/$name"/bin/zsh
 rm "$workdir/$name"/bin/zsh-5.8
 
 if [ -d /usr/share/terminfo ]; then
@@ -341,7 +360,7 @@ cat >"$workdir/$name"/share/zsh/5.8/scripts/relocate <<-\END
 		so that they point to directory DST.
 
 		The source directory must exist but the destination directory
-		doesn't have to.
+		does not have to.
 
 		Options:
 
@@ -402,7 +421,11 @@ cat >"$workdir/$name"/share/zsh/5.8/scripts/relocate <<-\END
 	  src="$(dirname -- "$0")"/../../../..
 	fi
 
-	if [ ! -d "$src" ] || ! src=$(readlink -f -- "$src"); then
+	absdir() {
+	  ( [ -d "$1" ] && cd -- "$1" && pwd )
+	}
+
+	if ! src=$(absdir "$src"); then
 	  >&2 echo "[error] not a directory: $src"
 	  exit 1
 	fi
@@ -414,7 +437,7 @@ cat >"$workdir/$name"/share/zsh/5.8/scripts/relocate <<-\END
 	  fi
 	else
 	  dst="$(dirname -- "$0")"/../../../..
-	  if [ ! -d "$dst" ] || ! dst=$(readlink -f -- "$dst"); then
+	  if ! dst=$(absdir "$dst"); then
 	    >&2 echo "[error] not a directory: $dst"
 	    exit 1
 	  fi
@@ -560,12 +583,12 @@ cat >&2 <<-END
 
 	This archive contains statically-linked, hermetic,
 	relocatable Zsh 5.8. Installation of Zsh from the archive
-	doesn't require libc, terminfo, ncurses or root access.
+	does not require libc, terminfo, ncurses or root access.
 	As long as the target machine has a compatible CPU and
-	kernel, it'll work.
+	kernel, it will work.
 
 	To install Zsh from the archive to ~/.zsh-bin, copy it to
-	the target machine's home directory and run:
+	the home directory on the target machine and run:
 
 	  cd
 	  rm -rf ~/.zsh-bin ~/$name
@@ -574,11 +597,11 @@ cat >&2 <<-END
 	  ~/.zsh-bin/share/zsh/5.8/scripts/relocate
 	  rm ~/$name.tar.gz
 
-	Now you can invoke ~/.zsh-bin/bin/zsh and it'll just work.
-	You'll probably want to add ~/.zsh-bin/bin to PATH for
+	Now you can invoke ~/.zsh-bin/bin/zsh and it will just work.
+	You will probably want to add ~/.zsh-bin/bin to PATH for
 	convenience.
 
-	If you move or rename ~/.zsh-bin, you'll need to call
+	If you move or rename ~/.zsh-bin, you will need to call
 	share/zsh/5.8/scripts/relocate/relocate afterwards. See the
 	last line in the instructions above.
 	END

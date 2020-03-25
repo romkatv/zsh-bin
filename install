@@ -74,6 +74,10 @@ Options:
 END
 )"
 
+absfile() {
+  ( [ -e "$1" ] && cd -- "${1%/*}" && d=$(pwd) && printf '%s/%s\n' "${d%/}" "${1##*/}" )
+}
+
 dir=
 quiet=
 check_sha256=
@@ -138,7 +142,7 @@ while getopts ':hqd:a:f:u:' opt "$@"; do
         >&2 echo "[error] incorrect value of $opt: $OPTARG"
         exit 1
       fi
-      if [ ! -e "$OPTARG" ] || ! file=$(readlink -f -- "$OPTARG"); then
+      if ! file=$(absfile "$OPTARG"); then
         >&2 echo "[error] file not found: $OPTARG"
         exit 1
       fi
@@ -270,7 +274,7 @@ if [ -n "$check_sha256" ]; then
     sha256=${sha256%% *}
   elif command -v sha256 >/dev/null 2>/dev/null; then
     hasher=$(command -v sha256)
-    hasher=$(readlink -f -- "$hasher" 2>/dev/null || true)
+    hasher=$(readlink -- "$hasher" 2>/dev/null || true)
     if [ "${hasher##*/}" != hashalot ]; then
       sha256=$(sha256 -- "$file")
       sha256=${sha256##* }
