@@ -348,7 +348,7 @@ cat >"$workdir/$name"/share/zsh/5.8/scripts/relocate <<-\END
 		  -s SRC  directory where Zsh is currently installed; this is the
 		          directory with `bin` and `usr` as subdirectories; if not
 		          specified, this directory is automatically derived from
-	          path to `relocate`
+		          path to `relocate`
 		  -d DST  directory from which Zsh will be used; this is the
 		          directory with `bin` and `usr` as subdirectories; if not
 		          specified, this directory is automatically derived from
@@ -361,9 +361,32 @@ cat >"$workdir/$name"/share/zsh/5.8/scripts/relocate <<-\END
 
 	while getopts ':s:d:h' opt "$@"; do
 	  case "$opt" in
-	    s)  src=$OPTARG;;
-	    d)  dst=$OPTARG;;
-	    h)  printf '%s\n' "$usage"; exit;;
+	    h)
+	      printf '%s\n' "$usage"
+	      exit
+	    ;;
+	    s)
+	      if [ -n "$src" ]; then
+	        >&2 echo "[error] duplicate option: $opt"
+	        exit 1
+	      fi
+	      if [ -z "$OPTARG" ]; then
+	        >&2 echo "[error] incorrect value of $opt: $OPTARG"
+	        exit 1
+	      fi
+	      src=$OPTARG
+	    ;;
+	    d)
+	      if [ -n "$dst" ]; then
+	        >&2 echo "[error] duplicate option: $opt"
+	        exit 1
+	      fi
+	      if [ -z "$OPTARG" ]; then
+	        >&2 echo "[error] incorrect value of $opt: $OPTARG"
+	        exit 1
+	      fi
+	      dst=$OPTARG
+	    ;;
 	    \?) >&2 echo "[error] invalid option: $OPTARG"           ; exit 1;;
 	    :)  >&2 echo "[error] missing required argument: $OPTARG"; exit 1;;
 	    *)  >&2 echo "[internal error] unhandled option: $opt"   ; exit 1;;
@@ -568,10 +591,43 @@ image=
 
 while getopts ':m:c:i:h' opt "$@"; do
   case "$opt" in
-    m)  arch=$OPTARG;;
-    c)  cpu=$OPTARG;;
-    i)  image=$OPTARG;;
-    h)  printf '%s\n' "$usage"; exit;;
+    h)
+      printf '%s\n' "$usage"
+      exit
+    ;;
+    m)
+      if [ -n "$arch" ]; then
+        >&2 echo "[error] duplicate option: $opt"
+        exit 1
+      fi
+      if [ -z "$OPTARG" ]; then
+        >&2 echo "[error] incorrect value of $opt: $OPTARG"
+        exit 1
+      fi
+      arch=$OPTARG
+    ;;
+    c)
+      if [ -n "$cpu" ]; then
+        >&2 echo "[error] duplicate option: $opt"
+        exit 1
+      fi
+      if [ -z "$OPTARG" ]; then
+        >&2 echo "[error] incorrect value of $opt: $OPTARG"
+        exit 1
+      fi
+      cpu=$OPTARG
+    ;;
+    i)
+      if [ -n "$image" ]; then
+        >&2 echo "[error] duplicate option: $opt"
+        exit 1
+      fi
+      if [ -z "$OPTARG" ]; then
+        >&2 echo "[error] incorrect value of $opt: $OPTARG"
+        exit 1
+      fi
+      image=$OPTARG
+    ;;
     \?) >&2 echo "[error] invalid option: $OPTARG"           ; exit 1;;
     :)  >&2 echo "[error] missing required argument: $OPTARG"; exit 1;;
     *)  >&2 echo "[internal error] unhandled option: $opt"   ; exit 1;;
