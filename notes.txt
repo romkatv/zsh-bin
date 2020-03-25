@@ -1,7 +1,6 @@
 TODO:
 
 - build on macOS
-- rename build script to `build`
 - add `-f FILE` and `-u URL` to `install` (at most one can be set); if these options are specified,
   it becomes legal to pass `-s SHA256` and `-m MD5` (both are OK)
 - unless `-kk` is set, check sha256 or md5 in `install`; if no match, or no binary to check with,

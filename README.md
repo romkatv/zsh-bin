@@ -52,16 +52,14 @@ afterwards. See the last line in the instructions above.
 ## Compiling
 
 ```sh
-git clone https://github.com/romkatv/zsh-bin.git
-cd zsh-bin
-./build-zsh-5.8
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/romkatv/zsh-bin/master/build)"
 ```
 
-`build-zsh-5.8` has a few options you might want to override. `build-zsh-5.8 -h` will list them.
+`build` has a few optional flags. Invoke it with `-h` to list them.
 
 On Linux build is done in a Docker container, so you'll need to install docker first. On non-Linux
 systems build is done on the host. In the latter case it's recommended to run the script in a
-freshly installed OS and nuke it afterwards.
+freshly installed OS.
 
 If everything goes well, `zsh-5.8-${KERNEL}-${ARCH}.tar.gz` will appear in the current directory.
 This archive contains statically-linked, hermetic, relocatable Zsh 5.8. Installation of Zsh from the
@@ -69,6 +67,10 @@ archive doesn't require libc, terminfo, ncurses or root access. As long as the t
 compatible CPU and kernel, it'll work.
 
 You can find built archives in [releases](https://github.com/romkatv/zsh-bin/releases).
+
+The build script stores source code tarballs that have been used during compilation in `./src`. If
+prior to build start this directory already contains necessary tarballs and their content is as
+expected, the build script uses these tarballs instead of downloading them from the internet.
 
 ## How it works
 
