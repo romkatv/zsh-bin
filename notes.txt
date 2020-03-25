@@ -34,25 +34,25 @@ packages:
 
 ------------------------
 
+brew install bash autoconf binutils groff make llvm ncurses libiconv util-linux perl wget pcre findutils grep gnu-sed
+export PATH="/usr/local/opt/findutils/libexec/gnubin:/usr/local/opt/grep/libexec/gnubin:/usr/local/opt/gnu-sed/libexec/gnubin:$PATH"
+
 xcode-select --install
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
 
-brew install bash autoconf binutils groff make llvm ncurses libiconv util-linux perl wget pcre findutils grep gnu-sed
+brew install autoconf make ncurses libiconv pcre
 
-brew install gcc@9
-export CC=gcc-9
-export CXX=g++-9
-
-export PATH="/usr/local/opt/findutils/libexec/gnubin:/usr/local/opt/grep/libexec/gnubin:/usr/local/opt/gnu-sed/libexec/gnubin:$PATH"
-
-export LDFLAGS="-L/usr/local/opt/ncurses/lib"
-export CPPFLAGS="-I/usr/local/opt/ncurses/include"
+export ZSH_BIN_KERNEL=darwin
+export ZSH_BIN_ARCH=x86_64
+export ZSH_BIN_CPU=x86-64
+outdir=$HOME/build-dir/out
+workdir=$HOME/build-dir/work
+name=zsh-5.8-"$ZSH_BIN_KERNEL"-"$ZSH_BIN_ARCH"
+cpus=10
 
 mkdir "$workdir"/lib
 ln -s /usr/local/opt/libiconv/lib/libiconv.a "$workdir"/lib
-#ln -s /usr/local/opt/ncurses/lib/libncurses.a "$workdir"/lib
 ln -s /usr/local/opt/ncurses/lib/libncursesw.a "$workdir"/lib
-#ln -s /usr/local/opt/ncurses/lib/libncursesw_g.a "$workdir"/lib
 ln -s /usr/local/opt/pcre/lib/libpcre.a "$workdir"/lib
 
 export CPPFLAGS='-I/usr/local/opt/libiconv/include -I/usr/local/opt/ncurses/include -I/usr/local/opt/pcre/include'
@@ -72,6 +72,7 @@ export CFLAGS="-march=$ZSH_BIN_CPU $CPPFLAGS"
   --disable-site-scriptdir              \
   --enable-cap                          \
   --with-tcsetpgrp                      \
+  --disable-dynamic                     \
   --host="$ZSH_BIN_ARCH"                \
   --enable-custom-patchlevel="$name"
 
