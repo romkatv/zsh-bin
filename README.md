@@ -225,7 +225,7 @@ a different interpreter. Try `zsh`, `dash` and `ash`. You might have one of thes
 
 This limitation can be removed but the motivation is rather low for doing this. There is no need
 for the build script to be super portable. The install script and `relocate` are a different matter.
-The must be very portable and they are. They work on older versions of bash just fine.
+They must be very portable and they are. They work on older versions of bash just fine.
 
 ---
 
@@ -253,7 +253,8 @@ not for Linux-aarch64 or Darwin-x86_64.
 Zsh from zsh-bin doesn't read global rc files from anywhere. It does read user rc files of course.
 
 This can be changed. An empty `etc` directory could be added to the archive, from which Zsh would
-source `zshenv` and similar files if they exist.
+source `zshenv` and similar files if they exist. Please open an issue or better yet send a PR if you
+care.
 
 ---
 
