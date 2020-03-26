@@ -72,7 +72,7 @@ compatible CPU and kernel, it'll work.
 You can find built archives in [releases](https://github.com/romkatv/zsh-bin/releases).
 
 The build script stores source code tarballs that have been used during compilation in `./src`. If
-prior to build start this directory already contains necessary tarballs and their content is as
+prior to building this directory already contains necessary tarballs and their content is as
 expected, the build script uses these tarballs instead of downloading them from the internet.
 
 ## How it works
@@ -156,8 +156,8 @@ echo "$new_fpath_dir" | dd of="$zsh" bs=1 seek=${#prefix} count=${#dir} conv=not
 
 ## Supported platforms
 
-The build script currently works on Linux and FreeBSD. Prebuilt archives for popular CPU
-architectures can be found in [releases](https://github.com/romkatv/zsh-bin/releases).
+The build script currently works on Linux, macOS, FreeBSD, Cygwin and MSYS2. Prebuilt archives for
+popular CPU architectures can be found in [releases](https://github.com/romkatv/zsh-bin/releases).
 
 You can use `zsh-5.8-linux-x86_64.tar.gz` on WSL but you cannot run the build script there.
 
