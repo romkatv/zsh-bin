@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Usage: build [-m ARCH] [-c CPU] [-i IMAGE] [-r FILE]
+# Usage: build [-m ARCH] [-c CPU] [-i IMAGE]
 #
 # Type `build -h` for help and see https://github.com/romkatv/zsh-bin
 # for full documentation.
@@ -36,10 +36,6 @@ Options:
             if not set explicitly
   -i IMAGE  docker image used for building zsh; inferred from ARCH
             if not set explicitly
-  -r FILE   path to a local tar.gz archive produced by `build` on
-            Linux; if some system-independent resources cannot be
-            built locally (e.g., help files), they will be picked from
-            this archive
 END
 )"
 
@@ -77,11 +73,13 @@ libiconv_url=https://ftp.gnu.org/pub/gnu/libiconv/libiconv-$libiconv_version.tar
 icmake_url=https://gitlab.com/fbb-git/icmake/-/archive/$icmake_version/icmake-$icmake_version.tar.gz
 yodl_url=https://gitlab.com/fbb-git/yodl/-/archive/$yodl_version/yodl-$yodl_version.tar.gz
 zsh_url=https://github.com/zsh-users/zsh/archive/zsh-5.8.tar.gz
+zsh_doc_url=https://github.com/romkatv/zsh-bin/releases/download/v3.0.0/zsh-5.8-linux-x86_64.tar.gz
 
-libiconv_sha256=365dac0b34b4255a0066e8033a8b3db4bdb94b9b57a9dca17ebf2d779139fe935caf51a465d17fd8ae229ec4b926f3f7025264f37243432075e5583925bb77b7
-icmake_sha256=2e6228c3bffa7fa145fd3743b1220d96b5730350718b91be96600cb24317e17aa5138282fe2f603d00dadd57d7a832ecff21a570eab0c21426f94d3208a61184
-yodl_sha256=59e23bb173786b8806f56bf302dee9d8d971d0d840c609e2b24d9783b5866fca2509be844616318f9a4f302117b3a41f620be5cba09181e7ccdcf0c141402be7
-zsh_sha256=2474ccb34b4bd7689b2158ec064d5740ddc4eaf5c785006cb251b793a11433817f81250c63eea46801004563097018090eb6a4b4d2670a648ae8bf698eae53dd
+libiconv_sha256=e6a1b1b589654277ee790cce3734f07876ac4ccfaecbee8afa0b649cf529cc04
+icmake_sha256=7c5c091f58f576da580238c5e3636e2038d9ecf5efb6562ae7e402910d9036e6
+yodl_sha256=0118efd6f05ddeed4910bb5e280a37a4d8e5c2f42fb2009c840b3d5c70f700f8
+zsh_sha256=db6cdfadac8d3d1f85c55c3644620cf5a0f65bf01ca26a58ff06f041bf159a5d
+zsh_doc_sha256=532d674c54811f060d66126820bc29b9e45340990eb2669f98c23ffe24631170
 
 cpus=$(getconf _NPROCESSORS_ONLN) || cpus=$(sysctl -n hw.ncpu) || cpus=8
 
@@ -92,10 +90,10 @@ fetch() {
   local base=${archive%.tar.gz}
   cd -- "$workdir"
   printf '%s  %s\n' "$sha256" "$archive" >"$base".sha256
-  if ! cp -- "$outdir/src/$archive" . 2>/dev/null || ! shasum -b -a 512 -c "$base".sha256; then
+  if ! cp -- "$outdir/src/$archive" . 2>/dev/null || ! shasum -b -a 256 -c "$base".sha256; then
     rm -f -- "$archive"
     wget -- "$url"
-    shasum -b -a 512 -c "$base".sha256
+    shasum -b -a 256 -c "$base".sha256
     mkdir -p -- "$outdir"/src
     cp -f -- "$archive" "$outdir"/src/tmp."$archive"
     mv -f -- "$outdir"/src/tmp."$archive" "$outdir"/src/"$archive"
@@ -160,6 +158,8 @@ case "$ZSH_BIN_KERNEL" in
       exit 1
     fi
     brew install autoconf libiconv ncurses pcre wget
+    fetch "$zsh_doc_url" "$zsh_doc_sha256"
+    mv -- "$workdir"/zsh-5.8-linux-x86_64 "$workdir"/zsh_doc
   ;;
   msys*|mingw*)
     pacman -Sy --noconfirm \
@@ -211,7 +211,7 @@ case "$ZSH_BIN_KERNEL" in
   ;;
 esac
 
-if [ -z "$ZSH_BIN_RESOURCES" ] && ! command -v yodl >/dev/null 2>&1; then
+if [ ! -e "$workdir"/zsh_doc ] && ! command -v yodl >/dev/null 2>&1; then
   if ! command -v icmake >/dev/null 2>&1; then
     fetch "$icmake_url" "$icmake_sha256"
     cd icmake-"$icmake_version"/icmake
@@ -393,7 +393,7 @@ cat >zshpaths.h <<-\END
 
 sed_i "s/@ZSH_BIN_MAGIC@/$magic/g" zshpaths.h
 
-if [ -n "$ZSH_BIN_RESOURCES" ]; then
+if [ -e "$workdir"/zsh_doc ]; then
   make -j "$cpus" install.bin install.modules install.fns
 else
   make -j "$cpus" install
@@ -408,12 +408,9 @@ else
   cp -- /usr/local/share/misc/terminfo.db "$workdir/$name"/share/
 fi
 
-if [ -n "$ZSH_BIN_RESOURCES" ]; then
-  mkdir -- "$workdir"/res
-  tar -C "$workdir"/res -xzf "$ZSH_BIN_RESOURCES"
-  res="$workdir/res/$(basename -- "${ZSH_BIN_RESOURCES%.tar.gz}")"
-  cp -r -- "$res"/share/man "$workdir/$name"/share/
-  cp -r -- "$res"/share/zsh/5.8/help "$workdir/$name"/share/zsh/5.8/
+if [ -e "$workdir"/zsh_doc ]; then
+  cp -r -- "$workdir"/zsh_doc/share/man "$workdir/$name"/share/
+  cp -r -- "$workdir"/zsh_doc/share/zsh/5.8/help "$workdir/$name"/share/zsh/5.8/
 fi
 
 sed_i 's/local HELPDIR=.*/[[ -n "${HELPDIR:-}" ]] || local HELPDIR="$(<<\\'"$magic"'\
@@ -698,9 +695,8 @@ absfile() {
 ZSH_BIN_ARCH=
 ZSH_BIN_CPU=
 ZSH_BIN_IMAGE=
-ZSH_BIN_RESOURCES=
 
-while getopts ':m:c:i:r:h' opt "$@"; do
+while getopts ':m:c:i:h' opt "$@"; do
   case "$opt" in
     h)
       printf '%s\n' "$usage"
@@ -738,21 +734,6 @@ while getopts ':m:c:i:r:h' opt "$@"; do
         exit 1
       fi
       ZSH_BIN_IMAGE=$OPTARG
-    ;;
-    r)
-      if [ -n "$ZSH_BIN_RESOURCES" ]; then
-        >&2 echo "[error] duplicate option: $opt"
-        exit 1
-      fi
-      if [ ! -f "$OPTARG" -o ! -r "$OPTARG" ]; then
-        >&2 echo "[error] not a readable file: $OPTARG"
-        exit 1
-      fi
-      if [ -n "${OPTARG%%*.tar.gz}" ]; then
-        >&2 echo "[error] not a tar.gz archive: $OPTARG"
-        exit 1
-      fi
-      ZSH_BIN_RESOURCES=$(absfile "$OPTARG")
     ;;
     \?) >&2 echo "[error] invalid option: $OPTARG"           ; exit 1;;
     :)  >&2 echo "[error] missing required argument: $OPTARG"; exit 1;;
@@ -806,28 +787,16 @@ case "$ZSH_BIN_KERNEL" in
       >&2 echo '[error] docker not found; please install and retry'
       exit 1
     fi
-    if [ -n "$ZSH_BIN_RESOURCES" ]; then
-      >&2 echo '[error] resource file (-r) is not supported on linux'
-      exit 1
-    fi
   ;;
   freebsd)
     if [ -n "$ZSH_BIN_IMAGE" ]; then
       >&2 echo '[error] docker image (-i) is not supported on freebsd'
       exit 1
     fi
-    if [ -n "$ZSH_BIN_RESOURCES" ]; then
-      >&2 echo '[error] resource file (-r) is not supported on freebsd'
-      exit 1
-    fi
   ;;
   darwin)
     if [ -n "$ZSH_BIN_IMAGE" ]; then
       >&2 echo '[error] docker image (-i) is not supported on freebsd'
-      exit 1
-    fi
-    if [ -z "$ZSH_BIN_RESOURCES" ]; then
-      >&2 echo '[error] resource file (-r) is required on macOS'
       exit 1
     fi
   ;;
@@ -839,10 +808,6 @@ case "$ZSH_BIN_KERNEL" in
     ZSH_BIN_KERNEL=$(printf '%s' "$ZSH_BIN_KERNEL" | sed 's/^\([^-]*-[0-9]*\.[0-9]*\).*/\1/')
     if [ -n "$ZSH_BIN_IMAGE" ]; then
       >&2 echo '[error] docker image (-i) is not supported on windows'
-      exit 1
-    fi
-    if [ -n "$ZSH_BIN_RESOURCES" ]; then
-      >&2 echo '[error] resource file (-r) is not supported on windows'
       exit 1
     fi
   ;;
@@ -861,15 +826,14 @@ esac
 
 case "$ZSH_BIN_KERNEL" in
   linux)
-    docker run                                  \
-      -e ZSH_BIN_KERNEL="$ZSH_BIN_KERNEL"       \
-      -e ZSH_BIN_ARCH="$ZSH_BIN_ARCH"           \
-      -e ZSH_BIN_CPU="$ZSH_BIN_CPU"             \
-      -e ZSH_BIN_RESOURCES="$ZSH_BIN_RESOURCES" \
-      -v "$PWD":/out                            \
-      -w /out                                   \
-      --tty                                     \
-      --rm                                      \
+    docker run                            \
+      -e ZSH_BIN_KERNEL="$ZSH_BIN_KERNEL" \
+      -e ZSH_BIN_ARCH="$ZSH_BIN_ARCH"     \
+      -e ZSH_BIN_CPU="$ZSH_BIN_CPU"       \
+      -v "$PWD":/out                      \
+      -w /out                             \
+      --tty                               \
+      --rm                                \
       -- "$ZSH_BIN_IMAGE" /bin/sh -uexc "$build"
   ;;
   freebsd|darwin|msys*|mingw*|cygwin*)
