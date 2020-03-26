@@ -283,7 +283,7 @@ export CFLAGS="$CPPFLAGS -march=$ZSH_BIN_CPU"
   --with-tcsetpgrp                   \
   --disable-dynamic                  \
   --host="$ZSH_BIN_ARCH"             \
-  --enable-custom-patchlevel="$name"
+  --enable-custom-patchlevel=zsh-5.8-0-g77d203f
 
 sed_i() {
   [ $# -gt 1 ]
