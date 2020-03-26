@@ -8,6 +8,7 @@
 - [Supported platforms](#supported-platforms)
 - [Why?](#why)
 - [No, seriously, why?](#no-seriously-why)
+- [Limitations](#limitations)
 
 ## Installation
 
@@ -25,8 +26,7 @@ sh -c "$(wget -O- https://raw.githubusercontent.com/romkatv/zsh-bin/master/insta
 
 Or, if you prefer, follow [manual installation](#manual-installation) instructions.
 
-Now you can invoke `~/.zsh-bin/bin/zsh` and it'll just work. You'll probably want to add
-`~/.zsh-bin/bin` to `PATH` for convenience.
+Add `~/.zsh-bin/bin` to `PATH` and type `zsh` to start Zsh.
 
 *Tip*: `install` has a few optional flags. Invoke it with `-h` to list them.
 
@@ -65,14 +65,15 @@ freshly installed OS.
 
 If everything goes well, `zsh-5.8-${KERNEL}-${ARCH}.tar.gz` will appear in the current directory.
 This archive contains statically-linked, hermetic, relocatable Zsh 5.8. Installation of Zsh from the
-archive doesn't require libc, terminfo, ncurses or root access. As long as the target machine has a
-compatible CPU and kernel, it'll work.
+archive doesn't require libc, ncurses, pcre, terminfo database or root access. As long as the target
+machine has a compatible CPU and kernel, it'll work.
 
 You can find built archives in [releases](https://github.com/romkatv/zsh-bin/releases).
 
 The build script stores source code tarballs that have been used during compilation in `./src`. If
-prior to building this directory already contains necessary tarballs and their content is as
-expected, the build script uses these tarballs instead of downloading them from the internet.
+you run `build` again, it'll use these tarballs after verifying that their content is as expected.
+This way you avoid downloading the same tarballs over and over again when running `build` multiple
+times.
 
 ## How it works
 
@@ -164,7 +165,8 @@ You can use `zsh-5.8-linux-x86_64.tar.gz` on WSL but you cannot run the build sc
 
 Assuming that you want to use Zsh 5.8 (who doesn't, right?), ideally you would install it with the
 official package manager for your OS. If your OS doesn't provide an option to install Zsh 5.8,
-or you don't have root access to install it, this option is out.
+or you don't have root access to install it, you'll need to look for alternative installation
+methods.
 
 The next thing you can try is to [build Zsh from source](
   https://github.com/zsh-users/zsh/blob/master/INSTALL) on the target machine. This method allows
@@ -177,7 +179,7 @@ necessary build tools, you can compile Zsh there and copy build artifacts to the
 machine. If you place all files in the same location and set a few custom environment variables, it
 should work.
 
-If all else fails, zsh-bin is here for you. Download a 3MB archive, extract it, and enjoy Zsh 5.8.
+Or you can download a 3MB archive from zsh-bin, extract it, and enjoy Zsh 5.8.
 
 ## No, seriously, why?
 
@@ -215,3 +217,48 @@ works for me, I figured it might be of use to others.
 My public standalone `ssh.zsh` script is [here](
   https://github.com/romkatv/dotfiles-public/blob/master/bin/ssh.zsh). See comments at the top if
 you are curious.
+
+## Limitations
+
+The build script doesn't work if `/bin/sh` is bash v4.4 or older. Use a newer version of bash or
+a different interpreter. Try `zsh`, `dash` and `ash`. You might have one of these already installed.
+
+This limitation can be removed but the motivation is rather low for doing this. There is no need
+for the build script to be super portable. The install script and `relocate` are a different matter.
+The must be very portable and they are. They work on older versions of bash just fine.
+
+---
+
+Not all zsh modules are enabled on all platforms:
+
+- `zsh/db_gdbm` is enabled only on Linux.
+- `zsh/attr` is disabled on FreeBSD.
+- `zsh/pcre` is disabled on Cygwin.
+
+This can be fixed. Please open an issue or better yet send a PR if you care.
+
+---
+
+The build script requires certain software to be installed by the user. For example, on Linux it
+needs Docker but cannot install it on its own. When you run `build`, it'll tell you what's missing.
+
+---
+
+Builds are done natively, meaning that the target kernel and CPU architecture must be the same as
+on the host. Given a Linux-x86_64 host, you can build Zsh for Linux-x86_64 and Linux-i686 but
+not for Linux-aarch64 or Darwin-x86_64.
+
+---
+
+Zsh from zsh-bin doesn't read global rc files from anywhere. It does read user rc files of course.
+
+This can be changed. An empty `etc` directory could be added to the archive, from which Zsh would
+source `zshenv` and similar files if they exist.
+
+---
+
+The build script doesn't know how to build man pages and help files on macOS. The problem is that
+there is no `yodl` for macOS and porting it is a daunting task. To get out of this conundrum `build`
+pulls man pages and help files from `zsh-5.8-linux-x86_64.tar.gz` and embeds them in
+`zsh-5.8-darwin-x86_64.tar.gz`. So if you are trying to reproduce the macOS build, you'll need to
+start by building Zsh for Linux-x86_64.
