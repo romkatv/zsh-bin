@@ -312,6 +312,10 @@ if [ -n "$algos" ]; then
         echo "$algo signature matches"
       fi
       algos=
+    else
+      if [ -z "$quiet" ]; then
+        echo "No local tools available to verify $algo signature"
+      fi
     fi
   done
 fi
