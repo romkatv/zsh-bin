@@ -81,9 +81,9 @@ END
 absfile() {
   [ -e "$1" ]
   local dir base
-  dir=$(dirname -- "$1")
-  base=$(basename -- "$1")
-  ( cd -- "$dir" && dir=$(pwd) && printf '%s/%s\n' "${dir%/}" "${base}" )
+  dir="$(dirname -- "$1")"
+  base="$(basename -- "$1")"
+  ( cd -- "$dir" && dir="$(pwd)" && printf '%s/%s\n' "${dir%/}" "${base}" )
 }
 
 dir=
@@ -115,7 +115,7 @@ while getopts ':hqd:a:f:u:' opt "$@"; do
         >&2 echo "[error] incorrect value of $opt: $OPTARG"
         exit 1
       fi
-      dir=$OPTARG
+      dir="$OPTARG"
     ;;
     a)
       case "$OPTARG" in
@@ -150,7 +150,7 @@ while getopts ':hqd:a:f:u:' opt "$@"; do
         >&2 echo "[error] incorrect value of $opt: $OPTARG"
         exit 1
       fi
-      if ! file=$(absfile "$OPTARG"); then
+      if ! file="$(absfile "$OPTARG")"; then
         >&2 echo "[error] file not found: $OPTARG"
         exit 1
       fi
@@ -164,7 +164,7 @@ while getopts ':hqd:a:f:u:' opt "$@"; do
         >&2 echo "[error] incorrect value of $opt: $OPTARG"
         exit 1
       fi
-      url=$OPTARG
+      url="$OPTARG"
     ;;
     \?) >&2 echo "[error] invalid option: $OPTARG"           ; exit 1;;
     :)  >&2 echo "[error] missing required argument: $OPTARG"; exit 1;;
@@ -207,7 +207,7 @@ if [ -e "$dir" ]; then
     >&2 echo "[error] not a directory: $dir"
     exit 1
   fi
-  files=$(ls -A -- "$dir")
+  files="$(ls -A -- "$dir")"
   if [ -n "$files" ]; then
     >&2 echo "[error] directory exists and not empty: $dir"
     exit 1
@@ -226,8 +226,8 @@ mkdir -- "$tmpdir"
 cd -- "$tmpdir"
 
 if [ -z "$file" -a -z "$url" ]; then
-  kernel=$(uname -s | tr '[A-Z]' '[a-z]')
-  arch=$(uname -m | tr '[A-Z]' '[a-z]')
+  kernel="$(uname -s | tr '[A-Z]' '[a-z]')"
+  arch="$(uname -m | tr '[A-Z]' '[a-z]')"
 
   case "$kernel" in
     msys_nt-6.*)     kernel=msys_nt-10.0;;
@@ -276,17 +276,17 @@ fi
 if [ -n "$check_sha256" ]; then
   sha256=none
   if command -v shasum >/dev/null 2>/dev/null; then
-    sha256=$(shasum -b -a 256 -- "$file")
-    sha256=${sha256%% *}
+    sha256="$(shasum -b -a 256 -- "$file")"
+    sha256="${sha256%% *}"
   elif command -v sha256sum >/dev/null 2>/dev/null; then
-    sha256=$(sha256sum -b -- "$file")
-    sha256=${sha256%% *}
+    sha256="$(sha256sum -b -- "$file")"
+    sha256="${sha256%% *}"
   elif command -v sha256 >/dev/null 2>/dev/null; then
-    hasher=$(command -v sha256)
-    hasher=$(readlink -- "$hasher" 2>/dev/null || true)
+    hasher="$(command -v sha256)"
+    hasher="$(readlink -- "$hasher" 2>/dev/null || true)"
     if [ "${hasher##*/}" != hashalot ]; then
-      sha256=$(sha256 -- "$file")
-      sha256=${sha256##* }
+      sha256="$(sha256 -- "$file")"
+      sha256="${sha256##* }"
     fi
   fi
   if [ "$sha256" != none ]; then
@@ -308,11 +308,11 @@ fi
 if [ -n "$check_md5" ]; then
   md5=none
   if command -v md5sum >/dev/null 2>/dev/null; then
-    md5=$(md5sum -b -- "$file")
-    md5=${md5%% *}
+    md5="$(md5sum -b -- "$file")"
+    md5="${md5%% *}"
   elif command -v md5 >/dev/null 2>/dev/null; then
-    md5=$(md5 -- "$file")
-    md5=${md5##* }
+    md5="$(md5 -- "$file")"
+    md5="${md5##* }"
   fi
   if [ "$md5" != none ]; then
     if [ -n "${archives##*md5:$md5;*}" ]; then
@@ -340,7 +340,7 @@ if [ -z "$quiet" ]; then
 fi
 
 tar -xzf "$file"
-base=$(basename -- "${file%.tar.gz}")
+base="$(basename -- "${file%.tar.gz}")"
 "$base"/share/zsh/5.8/scripts/relocate -d "$dir"
 
 if [ -z "$quiet" ]; then

@@ -40,17 +40,17 @@ END
 )"
 
 build="$(cat <<\END
-outdir=$(pwd)
+outdir="$(pwd)"
 
 if command -v mktemp >/dev/null 2>&1; then
-  workdir=$(mktemp -d "${TMPDIR:-/tmp}"/zsh-bin.XXXXXXXXXX)
+  workdir="$(mktemp -d "${TMPDIR:-/tmp}"/zsh-bin.XXXXXXXXXX)"
 else
   workdir="${TMPDIR:-/tmp}/zsh-bin.$$"
   mkdir -- "$workdir"
 fi
 
 cd -- "$workdir"
-workdir=$(pwd)
+workdir="$(pwd)"
 
 narg() { echo $#; }
 
@@ -81,13 +81,13 @@ yodl_sha256=0118efd6f05ddeed4910bb5e280a37a4d8e5c2f42fb2009c840b3d5c70f700f8
 zsh_sha256=db6cdfadac8d3d1f85c55c3644620cf5a0f65bf01ca26a58ff06f041bf159a5d
 zsh_doc_sha256=532d674c54811f060d66126820bc29b9e45340990eb2669f98c23ffe24631170
 
-cpus=$(getconf _NPROCESSORS_ONLN) || cpus=$(sysctl -n hw.ncpu) || cpus=8
+cpus="$(getconf _NPROCESSORS_ONLN)" || cpus="$(sysctl -n hw.ncpu)" || cpus=8
 
 fetch() {
-  local url=$1
-  local sha256=$2
-  local archive=${url##*/}
-  local base=${archive%.tar.gz}
+  local url="$1"
+  local sha256="$2"
+  local archive="${url##*/}"
+  local base="${archive%.tar.gz}"
   cd -- "$workdir"
   printf '%s  %s\n' "$sha256" "$archive" >"$base".sha256
   if ! cp -- "$outdir/src/$archive" . 2>/dev/null || ! shasum -b -a 256 -c "$base".sha256; then
@@ -287,10 +287,10 @@ export CFLAGS="$CPPFLAGS -march=$ZSH_BIN_CPU"
 
 sed_i() {
   [ $# -gt 1 ]
-  local script=$1
+  local script="$1"
   while [ $# != 1 ]; do
     shift
-    local file=$1
+    local file="$1"
     sed "$script" "$file" >"$file".tmp
     mv -- "$file".tmp "$file"
   done
@@ -469,7 +469,7 @@ cat >"$workdir/$name"/share/zsh/5.8/scripts/relocate <<-\END
 	        >&2 echo "[error] incorrect value of $opt: $OPTARG"
 	        exit 1
 	      fi
-	      src=$OPTARG
+	      src="$OPTARG"
 	    ;;
 	    d)
 	      if [ -n "$dst" ]; then
@@ -480,7 +480,7 @@ cat >"$workdir/$name"/share/zsh/5.8/scripts/relocate <<-\END
 	        >&2 echo "[error] incorrect value of $opt: $OPTARG"
 	        exit 1
 	      fi
-	      dst=$OPTARG
+	      dst="$OPTARG"
 	    ;;
 	    \?) >&2 echo "[error] invalid option: $OPTARG"           ; exit 1;;
 	    :)  >&2 echo "[error] missing required argument: $OPTARG"; exit 1;;
@@ -501,7 +501,7 @@ cat >"$workdir/$name"/share/zsh/5.8/scripts/relocate <<-\END
 	  ( [ -d "$1" ] && cd -- "$1" && pwd )
 	}
 
-	if ! src=$(absdir "$src"); then
+	if ! src="$(absdir "$src")"; then
 	  >&2 echo "[error] not a directory: $src"
 	  exit 1
 	fi
@@ -513,7 +513,7 @@ cat >"$workdir/$name"/share/zsh/5.8/scripts/relocate <<-\END
 	  fi
 	else
 	  dst="$(dirname -- "$0")"/../../../..
-	  if ! dst=$(absdir "$dst"); then
+	  if ! dst="$(absdir "$dst")"; then
 	    >&2 echo "[error] not a directory: $dst"
 	    exit 1
 	  fi
@@ -555,7 +555,7 @@ cat >"$workdir/$name"/share/zsh/5.8/scripts/relocate <<-\END
 
 	patch_help() {
 	  local data
-	  data=$(cat -- "$1")
+	  data="$(cat -- "$1")"
 	  local prefix="${data%%$magic*}"
 	  local suffix="${data##*$magic}"
 	  if [ "$prefix" = "$data" -o "$suffix" = "$data" ]; then
@@ -569,8 +569,8 @@ cat >"$workdir/$name"/share/zsh/5.8/scripts/relocate <<-\END
 	patch_bin() {
 	  local header_len=$((1 + ${#magic} + 1 + ${#2} + 1))
 	  local header
-	  if ! header=$(dd if="$zsh" bs=1 skip="$1" count="$header_len" 2>/dev/null); then
-	    header=$(dd if="$zsh" bs=1 skip="$1" count="$header_len")
+	  if ! header="$(dd if="$zsh" bs=1 skip="$1" count="$header_len" 2>/dev/null)"; then
+	    header="$(dd if="$zsh" bs=1 skip="$1" count="$header_len")"
 	  fi
 	  if [ "$header" != ":$magic:$2:" ]; then
 	    >&2 echo "[error] not a relocatable zsh binary: $zsh"
@@ -580,12 +580,12 @@ cat >"$workdir/$name"/share/zsh/5.8/scripts/relocate <<-\END
 	  local pos=$(($1 + header_len))
 	  local dir="${dst}$3"
 	  local err
-	  if ! err=$(dd if=/dev/zero of="$zsh".tmp bs=1 seek="$pos" count=4096 conv=notrunc 2>&1); then
+	  if ! err="$(dd if=/dev/zero of="$zsh".tmp bs=1 seek="$pos" count=4096 conv=notrunc 2>&1)"; then
 	    >&2 printf '%s\n' "$err"
 	    exit 1
 	  fi
-	  if ! err=$(printf '%s' "$dir" |
-	               dd of="$zsh".tmp bs=1 seek="$pos" count=${#dir} conv=notrunc 2>&1); then
+	  if ! err="$(printf '%s' "$dir" |
+	               dd of="$zsh".tmp bs=1 seek="$pos" count=${#dir} conv=notrunc 2>&1)"; then
 	    >&2 printf '%s\n' "$err"
 	    exit 1
 	  fi
@@ -598,7 +598,7 @@ cat >"$workdir/$name"/share/zsh/5.8/scripts/relocate <<-\END
 	patch_bin "$script_pos"   script   share/zsh/5.8/scripts
 	patch_bin "$terminfo_pos" terminfo share/terminfo
 
-	if ! fpath=$("$zsh".tmp -c 'print -r -- $fpath[1]') ||
+	if ! fpath="$("$zsh".tmp -c 'print -r -- $fpath[1]')" ||
 	   [ "${fpath#$dst}" = "$fpath" ]; then
 	  >&2 echo "[error] failed to relocate zsh"
 	  exit 1
@@ -618,10 +618,10 @@ embed_pos() {
     (( $#parts == 2 ))
     print -r -- $#parts[1]'
   local pos
-  pos=$("$workdir/$name"/bin/zsh -fuec "$cmd" "$workdir/$name"/bin/zsh ":$magic:$1:")
+  pos="$("$workdir/$name"/bin/zsh -fuec "$cmd" "$workdir/$name"/bin/zsh ":$magic:$1:")"
   printf '%s' "$pos" | grep -qxE '[0-9]+'
   local upper
-  upper=$(printf '%s' "$1" | tr '[a-z]' '[A-Z]')
+  upper="$(printf '%s' "$1" | tr '[a-z]' '[A-Z]')"
   sed_i "s/@ZSH_BIN_${upper}_POS@/$pos/g" "$workdir/$name"/share/zsh/5.8/scripts/relocate
 }
 
@@ -687,9 +687,9 @@ END
 absfile() {
   [ -e "$1" ]
   local dir base
-  dir=$(dirname -- "$1")
-  base=$(basename -- "$1")
-  ( cd -- "$dir" && dir=$(pwd) && printf '%s/%s\n' "${dir%/}" "${base}" )
+  dir="$(dirname -- "$1")"
+  base="$(basename -- "$1")"
+  ( cd -- "$dir" && dir="$(pwd)" && printf '%s/%s\n' "${dir%/}" "${base}" )
 }
 
 ZSH_BIN_ARCH=
@@ -711,7 +711,7 @@ while getopts ':m:c:i:h' opt "$@"; do
         >&2 echo "[error] incorrect value of $opt: $OPTARG"
         exit 1
       fi
-      ZSH_BIN_ARCH=$OPTARG
+      ZSH_BIN_ARCH="$OPTARG"
     ;;
     c)
       if [ -n "$ZSH_BIN_CPU" ]; then
@@ -722,7 +722,7 @@ while getopts ':m:c:i:h' opt "$@"; do
         >&2 echo "[error] incorrect value of $opt: $OPTARG"
         exit 1
       fi
-      ZSH_BIN_CPU=$OPTARG
+      ZSH_BIN_CPU="$OPTARG"
     ;;
     i)
       if [ -n "$ZSH_BIN_IMAGE" ]; then
@@ -733,7 +733,7 @@ while getopts ':m:c:i:h' opt "$@"; do
         >&2 echo "[error] incorrect value of $opt: $OPTARG"
         exit 1
       fi
-      ZSH_BIN_IMAGE=$OPTARG
+      ZSH_BIN_IMAGE="$OPTARG"
     ;;
     \?) >&2 echo "[error] invalid option: $OPTARG"           ; exit 1;;
     :)  >&2 echo "[error] missing required argument: $OPTARG"; exit 1;;
@@ -747,8 +747,8 @@ if [ "$OPTIND" -le $# ]; then
 fi
 
 if [ -z "$ZSH_BIN_ARCH" ]; then
-  ZSH_BIN_ARCH=$(uname -m)
-  ZSH_BIN_ARCH=$(printf '%s' "$ZSH_BIN_ARCH" | tr '[A-Z]' '[a-z]')
+  ZSH_BIN_ARCH="$(uname -m)"
+  ZSH_BIN_ARCH="$(printf '%s' "$ZSH_BIN_ARCH" | tr '[A-Z]' '[a-z]')"
 fi
 
 if [ -z "$ZSH_BIN_CPU" ]; then
@@ -756,7 +756,7 @@ if [ -z "$ZSH_BIN_CPU" ]; then
     armv7l)         ZSH_BIN_CPU=armv7;;
     aarch64)        ZSH_BIN_CPU=armv8-a;;
     x86_64|amd64)   ZSH_BIN_CPU=x86-64;;
-    i386|i586|i686) ZSH_BIN_CPU=$ZSH_BIN_ARCH;;
+    i386|i586|i686) ZSH_BIN_CPU="$ZSH_BIN_ARCH";;
     *)
       >&2 echo '[error] unable to infer target CPU architecture'
       >&2 echo 'Please specify explicitly with `-c CPU`.'
@@ -765,8 +765,8 @@ if [ -z "$ZSH_BIN_CPU" ]; then
   esac
 fi
 
-ZSH_BIN_KERNEL=$(uname -s)
-ZSH_BIN_KERNEL=$(printf '%s' "$ZSH_BIN_KERNEL" | tr '[A-Z]' '[a-z]')
+ZSH_BIN_KERNEL="$(uname -s)"
+ZSH_BIN_KERNEL="$(printf '%s' "$ZSH_BIN_KERNEL" | tr '[A-Z]' '[a-z]')"
 
 case "$ZSH_BIN_KERNEL" in
   linux)
@@ -805,7 +805,7 @@ case "$ZSH_BIN_KERNEL" in
       >&2 echo '[error] unsupported kernel, sorry!'
       exit 1
     fi
-    ZSH_BIN_KERNEL=$(printf '%s' "$ZSH_BIN_KERNEL" | sed 's/^\([^-]*-[0-9]*\.[0-9]*\).*/\1/')
+    ZSH_BIN_KERNEL="$(printf '%s' "$ZSH_BIN_KERNEL" | sed 's/^\([^-]*-[0-9]*\.[0-9]*\).*/\1/')"
     if [ -n "$ZSH_BIN_IMAGE" ]; then
       >&2 echo '[error] docker image (-i) is not supported on windows'
       exit 1
