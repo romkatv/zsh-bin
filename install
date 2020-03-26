@@ -21,7 +21,7 @@
 #   -f FILE Install from a local file. FILE must point to *.tar.gz produced by
 #           the build script.
 #
-#   -u URL  Download the archive  from the specified location and install as
+#   -u URL  Download the archive from the specified location and install as
 #           usual. Must point to *.tar.gz produced by the build script.
 
 {
@@ -70,7 +70,7 @@ Options:
   -f FILE Install from a local file. FILE must point to *.tar.gz produced by
           the build script.
 
-  -u URL  Download the archive  from the specified location and install as
+  -u URL  Download the archive from the specified location and install as
           usual. Must point to *.tar.gz produced by the build script.
 END
 )"
