@@ -97,18 +97,18 @@ while getopts ':hqd:a:f:u:' opt "$@"; do
     ;;
     q)
       if [ -n "$quiet" ]; then
-        >&2 echo "[error] duplicate option: $opt"
+        >&2 echo "[error] duplicate option: -$opt"
         exit 1
       fi
       quiet=1
     ;;
     d)
       if [ -n "$dir" ]; then
-        >&2 echo "[error] duplicate option: $opt"
+        >&2 echo "[error] duplicate option: -$opt"
         exit 1
       fi
       if [ -z "$OPTARG" ]; then
-        >&2 echo "[error] incorrect value of $opt: $OPTARG"
+        >&2 echo "[error] incorrect value of -$opt: $OPTARG"
         exit 1
       fi
       dir="$OPTARG"
@@ -117,24 +117,24 @@ while getopts ':hqd:a:f:u:' opt "$@"; do
       case "$OPTARG" in
         sha256|md5)
           if [ -n "$algos" -a -z "${algos##*$OPTARG*}" ]; then
-            >&2 echo "[error] duplicate option: $opt $OPTARG"
+            >&2 echo "[error] duplicate option: -$opt $OPTARG"
             exit 1
           fi
           algos="$algos $OPTARG"
         ;;
         *)
-          >&2 echo "[error] incorrect value of $opt: $OPTARG"
+          >&2 echo "[error] incorrect value of -$opt: $OPTARG"
           exit 1
         ;;
       esac
     ;;
     f)
       if [ -n "$file" ]; then
-        >&2 echo "[error] duplicate option: $opt"
+        >&2 echo "[error] duplicate option: -$opt"
         exit 1
       fi
       if [ -z "$OPTARG" ]; then
-        >&2 echo "[error] incorrect value of $opt: $OPTARG"
+        >&2 echo "[error] incorrect value of -$opt: $OPTARG"
         exit 1
       fi
       if ! file="$(absfile "$OPTARG")"; then
@@ -144,18 +144,18 @@ while getopts ':hqd:a:f:u:' opt "$@"; do
     ;;
     u)
       if [ -n "$url" ]; then
-        >&2 echo "[error] duplicate option: $opt"
+        >&2 echo "[error] duplicate option: -$opt"
         exit 1
       fi
       if [ -z "$OPTARG" ]; then
-        >&2 echo "[error] incorrect value of $opt: $OPTARG"
+        >&2 echo "[error] incorrect value of -$opt: $OPTARG"
         exit 1
       fi
       url="$OPTARG"
     ;;
-    \?) >&2 echo "[error] invalid option: $OPTARG"           ; exit 1;;
-    :)  >&2 echo "[error] missing required argument: $OPTARG"; exit 1;;
-    *)  >&2 echo "[internal error] unhandled option: $opt"   ; exit 1;;
+    \?) >&2 echo "[error] invalid option: -$OPTARG"           ; exit 1;;
+    :)  >&2 echo "[error] missing required argument: -$OPTARG"; exit 1;;
+    *)  >&2 echo "[internal error] unhandled option: -$opt"   ; exit 1;;
   esac
 done
 

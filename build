@@ -462,29 +462,29 @@ cat >"$workdir/$name"/share/zsh/5.8/scripts/relocate <<-\END
 	    ;;
 	    s)
 	      if [ -n "$src" ]; then
-	        >&2 echo "[error] duplicate option: $opt"
+	        >&2 echo "[error] duplicate option: -$opt"
 	        exit 1
 	      fi
 	      if [ -z "$OPTARG" ]; then
-	        >&2 echo "[error] incorrect value of $opt: $OPTARG"
+	        >&2 echo "[error] incorrect value of -$opt: $OPTARG"
 	        exit 1
 	      fi
 	      src="$OPTARG"
 	    ;;
 	    d)
 	      if [ -n "$dst" ]; then
-	        >&2 echo "[error] duplicate option: $opt"
+	        >&2 echo "[error] duplicate option: -$opt"
 	        exit 1
 	      fi
 	      if [ -z "$OPTARG" ]; then
-	        >&2 echo "[error] incorrect value of $opt: $OPTARG"
+	        >&2 echo "[error] incorrect value of -$opt: $OPTARG"
 	        exit 1
 	      fi
 	      dst="$OPTARG"
 	    ;;
-	    \?) >&2 echo "[error] invalid option: $OPTARG"           ; exit 1;;
-	    :)  >&2 echo "[error] missing required argument: $OPTARG"; exit 1;;
-	    *)  >&2 echo "[internal error] unhandled option: $opt"   ; exit 1;;
+	    \?) >&2 echo "[error] invalid option: -$OPTARG"           ; exit 1;;
+	    :)  >&2 echo "[error] missing required argument: -$OPTARG"; exit 1;;
+	    *)  >&2 echo "[internal error] unhandled option: -$opt"   ; exit 1;;
 	  esac
 	done
 
@@ -704,40 +704,40 @@ while getopts ':m:c:i:h' opt "$@"; do
     ;;
     m)
       if [ -n "$ZSH_BIN_ARCH" ]; then
-        >&2 echo "[error] duplicate option: $opt"
+        >&2 echo "[error] duplicate option: -$opt"
         exit 1
       fi
       if [ -z "$OPTARG" ]; then
-        >&2 echo "[error] incorrect value of $opt: $OPTARG"
+        >&2 echo "[error] incorrect value of -$opt: $OPTARG"
         exit 1
       fi
       ZSH_BIN_ARCH="$OPTARG"
     ;;
     c)
       if [ -n "$ZSH_BIN_CPU" ]; then
-        >&2 echo "[error] duplicate option: $opt"
+        >&2 echo "[error] duplicate option: -$opt"
         exit 1
       fi
       if [ -z "$OPTARG" ]; then
-        >&2 echo "[error] incorrect value of $opt: $OPTARG"
+        >&2 echo "[error] incorrect value of -$opt: $OPTARG"
         exit 1
       fi
       ZSH_BIN_CPU="$OPTARG"
     ;;
     i)
       if [ -n "$ZSH_BIN_IMAGE" ]; then
-        >&2 echo "[error] duplicate option: $opt"
+        >&2 echo "[error] duplicate option: -$opt"
         exit 1
       fi
       if [ -z "$OPTARG" ]; then
-        >&2 echo "[error] incorrect value of $opt: $OPTARG"
+        >&2 echo "[error] incorrect value of -$opt: $OPTARG"
         exit 1
       fi
       ZSH_BIN_IMAGE="$OPTARG"
     ;;
-    \?) >&2 echo "[error] invalid option: $OPTARG"           ; exit 1;;
-    :)  >&2 echo "[error] missing required argument: $OPTARG"; exit 1;;
-    *)  >&2 echo "[internal error] unhandled option: $opt"   ; exit 1;;
+    \?) >&2 echo "[error] invalid option: -$OPTARG"           ; exit 1;;
+    :)  >&2 echo "[error] missing required argument: -$OPTARG"; exit 1;;
+    *)  >&2 echo "[internal error] unhandled option: -$opt"   ; exit 1;;
   esac
 done
 
