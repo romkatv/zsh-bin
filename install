@@ -262,32 +262,32 @@ if [ "$check_sig" = 1 ]; then
   fi
 
   for algo in sha256 md5; do
-    hash=
+    hash=none
     case "$algo" in
       sha256)
         if command -v shasum >/dev/null 2>/dev/null; then
           hash="$(shasum -b -a 256 -- "$file")"
-          hash="sha256:${hash%% *}"
+          hash="${hash%% *}"
         elif command -v sha256sum >/dev/null 2>/dev/null; then
           hash="$(sha256sum -b -- "$file")"
-          hash="sha256:${hash%% *}"
+          hash="${hash%% *}"
         elif command -v sha256 >/dev/null 2>/dev/null; then
           # Ignore sha256 output if it's from hashalot. It's incompatible.
           hash="$(sha256 -- "$file" </dev/null)"
           if [ ${#hash} -lt 64 ]; then
-            hash=
+            hash=none
           else
-            hash="sha256:${hash##* }"
+            hash="${hash##* }"
           fi
         fi
       ;;
       md5)
         if command -v md5sum >/dev/null 2>/dev/null; then
           hash="$(md5sum -b -- "$file")"
-          hash="md5:${hash%% *}"
+          hash="${hash%% *}"
         elif command -v md5 >/dev/null 2>/dev/null; then
           hash="$(md5 -- "$file")"
-          hash="md5:${hash##* }"
+          hash="${hash##* }"
         fi
       ;;
       *)
@@ -295,17 +295,17 @@ if [ "$check_sig" = 1 ]; then
         exit 1
       ;;
     esac
-    if [ -n "$hash" ]; then
-      if [ -n "${archives##* $hash;*}" ]; then
+    if [ "$hash" != none ]; then
+      if [ -n "${archives##* $algo:$hash;*}" ]; then
         >&2 echo "[error] $algo signature mismatch"
         >&2 echo ""
         >&2 echo "Expected:"
         >&2 echo ""
-        >&2 echo "  $(printf "%s" "$archives" | grep -F "${file##*/}")"
+        >&2 echo "  $(printf "%s" "$archives" | grep -F "${file##*/}" | sed 's/  */ /g')"
         >&2 echo ""
         >&2 echo "Found:"
         >&2 echo ""
-        >&2 echo "  file:${file##*/}; $hash;"
+        >&2 echo "  $algo:$hash"
         exit 1
       fi
       if [ -z "$quiet" ]; then
