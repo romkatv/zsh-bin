@@ -1,20 +1,31 @@
 #!/bin/sh
 #
-# Usage: build [-m ARCH] [-c CPU] [-i IMAGE]
+# Usage: build [-m ARCH] [-c CPU] [-i IMAGE] [-r FILE]
 #
 # Type `build -h` for help and see https://github.com/romkatv/zsh-bin
 # for full documentation.
 
 set -ue
 
+if [ -n "${BASH_VERSION:-}" ]; then
+  if [ -z "${BASH_VERSION##[0-4].*}" ]; then
+    >&2 echo "[error] bash version < 5 is not supported; try another interpreter"
+    exit 1
+  fi
+fi
+
+if [ -n "${ZSH_VERSION:-}" ]; then
+  emulate sh -o err_exit -o no_unset
+fi
+
 usage="$(cat <<\END
-Usage: build [-m ARCH] [-c CPU] [-i IMAGE]
+Usage: build [-m ARCH] [-c CPU] [-i IMAGE] [-r FILE]
 
 Creates an archive containing statically-linked, hermetic,
 relocatable Zsh 5.8. Installation of Zsh from the archive
 does not require libc, terminfo, ncurses or root access.
 As long as the target machine has a compatible CPU and
-Linux kernel, it will work.
+kernel, it will work.
 
 Options:
 
@@ -25,6 +36,10 @@ Options:
             if not set explicitly
   -i IMAGE  docker image used for building zsh; inferred from ARCH
             if not set explicitly
+  -r FILE   path to a local tar.gz archive produced by `build` on
+            Linux; if some system-independent resources cannot be
+            built locally (e.g., help files), they will be picked from
+            this archive
 END
 )"
 
@@ -40,6 +55,13 @@ fi
 
 cd -- "$workdir"
 workdir=$(pwd)
+
+narg() { echo $#; }
+
+if [ "$(narg "$workdir")" != 1 -o -z "${workdir##*:*}" ]; then
+  >&2 echo "[error] cannot build in this directory: $workdir"
+  exit 1
+fi
 
 cleanup() {
   cd /
@@ -128,6 +150,17 @@ case "$ZSH_BIN_KERNEL" in
       pcre         \
       yodl
   ;;
+  darwin)
+    if ! command -v make >/dev/null 2>&1 || ! command -v gcc >/dev/null 2>&1; then
+      >&2 echo "[error] please run 'xcode-select --install' and retry"
+      exit 1
+    fi
+    if ! command -v brew >/dev/null 2>&1; then
+      >&2 echo "[error] please install homebrew from https://brew.sh/ and retry"
+      exit 1
+    fi
+    brew install autoconf libiconv ncurses pcre wget
+  ;;
   msys*|mingw*)
     pacman -Sy --noconfirm \
       autoconf             \
@@ -146,6 +179,22 @@ case "$ZSH_BIN_KERNEL" in
     for cmd in autoconf bash colcrt gcc g++ groff ld make shasum tar wget; do
       if ! command -v "$cmd" >/dev/null 2>&1; then
         >&2 echo "[error] command not found: $cmd"
+        >&2 echo ""
+        >&2 echo "Make sure the following Cygwin packages are installed:"
+        >&2 echo ""
+        >&2 echo "  autoconf"
+        >&2 echo "  bash"
+        >&2 echo "  binutils"
+        >&2 echo "  gcc-core"
+        >&2 echo "  gcc-g++"
+        >&2 echo "  groff"
+        >&2 echo "  libiconv-devel"
+        >&2 echo "  libncurses-devel"
+        >&2 echo "  make"
+        >&2 echo "  perl"
+        >&2 echo "  tar"
+        >&2 echo "  util-linux"
+        >&2 echo "  wget"
         exit 1
       fi
     done
@@ -162,7 +211,7 @@ case "$ZSH_BIN_KERNEL" in
   ;;
 esac
 
-if ! command -v yodl >/dev/null 2>&1; then
+if [ -z "$ZSH_BIN_RESOURCES" ] && ! command -v yodl >/dev/null 2>&1; then
   if ! command -v icmake >/dev/null 2>&1; then
     fetch "$icmake_url" "$icmake_sha256"
     cd icmake-"$icmake_version"/icmake
@@ -189,12 +238,27 @@ cd zsh-zsh-5.8
 
 name=zsh-5.8-"$ZSH_BIN_KERNEL"-"$ZSH_BIN_ARCH"
 
+export CPPFLAGS=
+export LDFLAGS=
+export LIBS=
+
 case "$ZSH_BIN_KERNEL" in
   linux|freebsd|msys*|mingw*)
-    extra='--enable-libs=-lpcre'
+    LDFLAGS="-static"
+    LIBS="-lpcre"
+  ;;
+  darwin)
+    opt=/usr/local/opt
+    mkdir -- "$workdir"/lib
+    ln -s "$opt"/libiconv/lib/libiconv.a   "$workdir"/lib
+    ln -s "$opt"/ncurses/lib/libncursesw.a "$workdir"/lib
+    ln -s "$opt"/pcre/lib/libpcre.a        "$workdir"/lib
+    CPPFLAGS="-I$opt/libiconv/include -I$opt/ncurses/include -I$opt/pcre/include"
+    LDFLAGS="-L$workdir/lib"
+    LIBS="-lpcre"
   ;;
   cygwin*)
-    extra=
+    LDFLAGS="-static"
   ;;
   *)
     >&2 echo "[internal error] unhandled kernel: $ZSH_BIN_KERNEL"
@@ -202,25 +266,24 @@ case "$ZSH_BIN_KERNEL" in
   ;;
 esac
 
+export CFLAGS="$CPPFLAGS -march=$ZSH_BIN_CPU"
+
 ./Util/preconfig
-./configure                             \
-  --prefix="$workdir/$name"             \
-  --disable-etcdir                      \
-  --disable-zshenv                      \
-  --disable-zshrc                       \
-  --disable-zlogin                      \
-  --disable-zprofile                    \
-  --disable-zlogout                     \
-  --disable-site-fndir                  \
-  --disable-site-scriptdir              \
-  --enable-cap                          \
-  --with-tcsetpgrp                      \
-  --disable-dynamic                     \
-  --enable-ldflags=-static              \
-  --enable-cflags=-march="$ZSH_BIN_CPU" \
-  --host="$ZSH_BIN_ARCH"                \
-  --enable-custom-patchlevel="$name"    \
-  $extra
+./configure                          \
+  --prefix="$workdir/$name"          \
+  --disable-etcdir                   \
+  --disable-zshenv                   \
+  --disable-zshrc                    \
+  --disable-zlogin                   \
+  --disable-zprofile                 \
+  --disable-zlogout                  \
+  --disable-site-fndir               \
+  --disable-site-scriptdir           \
+  --enable-cap                       \
+  --with-tcsetpgrp                   \
+  --disable-dynamic                  \
+  --host="$ZSH_BIN_ARCH"             \
+  --enable-custom-patchlevel="$name"
 
 sed_i() {
   [ $# -gt 1 ]
@@ -239,6 +302,9 @@ case "$ZSH_BIN_KERNEL" in
   linux);;
   freebsd)
     sed_i 's/attr.mdd link=static/attr.mdd link=no/' config.modules
+    sed_i 's/db_gdbm.mdd link=static/db_gdbm.mdd link=no/' config.modules
+  ;;
+  darwin)
     sed_i 's/db_gdbm.mdd link=static/db_gdbm.mdd link=no/' config.modules
   ;;
   msys*|mingw*)
@@ -327,14 +393,27 @@ cat >zshpaths.h <<-\END
 
 sed_i "s/@ZSH_BIN_MAGIC@/$magic/g" zshpaths.h
 
-make -j "$cpus" install
+if [ -n "$ZSH_BIN_RESOURCES" ]; then
+  make -j "$cpus" install.bin install.modules install.fns
+else
+  make -j "$cpus" install
+fi
+
 strip "$workdir/$name"/bin/zsh
 rm "$workdir/$name"/bin/zsh-5.8
 
 if [ -d /usr/share/terminfo ]; then
-  cp -r /usr/share/terminfo "$workdir/$name"/share/
+  cp -r -- /usr/share/terminfo "$workdir/$name"/share/
 else
-  cp /usr/local/share/misc/terminfo.db "$workdir/$name"/share/
+  cp -- /usr/local/share/misc/terminfo.db "$workdir/$name"/share/
+fi
+
+if [ -n "$ZSH_BIN_RESOURCES" ]; then
+  mkdir -- "$workdir"/res
+  tar -C "$workdir"/res -xzf "$ZSH_BIN_RESOURCES"
+  res="$workdir/res/$(basename -- "${ZSH_BIN_RESOURCES%.tar.gz}")"
+  cp -r -- "$res"/share/man "$workdir/$name"/share/
+  cp -r -- "$res"/share/zsh/5.8/help "$workdir/$name"/share/zsh/5.8/
 fi
 
 sed_i 's/local HELPDIR=.*/[[ -n "${HELPDIR:-}" ]] || local HELPDIR="$(<<\\'"$magic"'\
@@ -365,13 +444,13 @@ cat >"$workdir/$name"/share/zsh/5.8/scripts/relocate <<-\END
 		Options:
 
 		  -s SRC  directory where Zsh is currently installed; this is the
-		          directory with `bin` and `usr` as subdirectories; if not
+		          directory with 'bin' and 'usr' as subdirectories; if not
 		          specified, this directory is automatically derived from
-		          path to `relocate`
+		          path to 'relocate'
 		  -d DST  directory from which Zsh will be used; this is the
-		          directory with `bin` and `usr` as subdirectories; if not
+		          directory with 'bin' and 'usr' as subdirectories; if not
 		          specified, this directory is automatically derived from
-		          path to `relocate`
+		          path to 'relocate'
 		USAGE
 	)"
 
@@ -563,7 +642,7 @@ case "$ZSH_BIN_KERNEL" in
   linux)
     deref=--hard-dereference
   ;;
-  freebsd|msys*|mingw*|cygwin*)
+  freebsd|darwin|msys*|mingw*|cygwin*)
     deref=
   ;;
   *)
@@ -608,18 +687,27 @@ cat >&2 <<-END
 END
 )"
 
-arch=
-cpu=
-image=
+absfile() {
+  [ -e "$1" ]
+  local dir base
+  dir=$(dirname -- "$1")
+  base=$(basename -- "$1")
+  ( cd -- "$dir" && dir=$(pwd) && printf '%s/%s\n' "${dir%/}" "${base}" )
+}
 
-while getopts ':m:c:i:h' opt "$@"; do
+ZSH_BIN_ARCH=
+ZSH_BIN_CPU=
+ZSH_BIN_IMAGE=
+ZSH_BIN_RESOURCES=
+
+while getopts ':m:c:i:r:h' opt "$@"; do
   case "$opt" in
     h)
       printf '%s\n' "$usage"
       exit
     ;;
     m)
-      if [ -n "$arch" ]; then
+      if [ -n "$ZSH_BIN_ARCH" ]; then
         >&2 echo "[error] duplicate option: $opt"
         exit 1
       fi
@@ -627,10 +715,10 @@ while getopts ':m:c:i:h' opt "$@"; do
         >&2 echo "[error] incorrect value of $opt: $OPTARG"
         exit 1
       fi
-      arch=$OPTARG
+      ZSH_BIN_ARCH=$OPTARG
     ;;
     c)
-      if [ -n "$cpu" ]; then
+      if [ -n "$ZSH_BIN_CPU" ]; then
         >&2 echo "[error] duplicate option: $opt"
         exit 1
       fi
@@ -638,10 +726,10 @@ while getopts ':m:c:i:h' opt "$@"; do
         >&2 echo "[error] incorrect value of $opt: $OPTARG"
         exit 1
       fi
-      cpu=$OPTARG
+      ZSH_BIN_CPU=$OPTARG
     ;;
     i)
-      if [ -n "$image" ]; then
+      if [ -n "$ZSH_BIN_IMAGE" ]; then
         >&2 echo "[error] duplicate option: $opt"
         exit 1
       fi
@@ -649,7 +737,22 @@ while getopts ':m:c:i:h' opt "$@"; do
         >&2 echo "[error] incorrect value of $opt: $OPTARG"
         exit 1
       fi
-      image=$OPTARG
+      ZSH_BIN_IMAGE=$OPTARG
+    ;;
+    r)
+      if [ -n "$ZSH_BIN_RESOURCES" ]; then
+        >&2 echo "[error] duplicate option: $opt"
+        exit 1
+      fi
+      if [ ! -f "$OPTARG" -o ! -r "$OPTARG" ]; then
+        >&2 echo "[error] not a readable file: $OPTARG"
+        exit 1
+      fi
+      if [ -n "${OPTARG%%*.tar.gz}" ]; then
+        >&2 echo "[error] not a tar.gz archive: $OPTARG"
+        exit 1
+      fi
+      ZSH_BIN_RESOURCES=$(absfile "$OPTARG")
     ;;
     \?) >&2 echo "[error] invalid option: $OPTARG"           ; exit 1;;
     :)  >&2 echo "[error] missing required argument: $OPTARG"; exit 1;;
@@ -662,17 +765,17 @@ if [ "$OPTIND" -le $# ]; then
   return 1
 fi
 
-if [ -z "$arch" ]; then
-  arch=$(uname -m)
-  arch=$(printf '%s' "$arch" | tr '[A-Z]' '[a-z]')
+if [ -z "$ZSH_BIN_ARCH" ]; then
+  ZSH_BIN_ARCH=$(uname -m)
+  ZSH_BIN_ARCH=$(printf '%s' "$ZSH_BIN_ARCH" | tr '[A-Z]' '[a-z]')
 fi
 
-if [ -z "$cpu" ]; then
-  case "$arch" in
-    armv7l)         cpu=armv7;;
-    aarch64)        cpu=armv8-a;;
-    x86_64|amd64)   cpu=x86-64;;
-    i386|i586|i686) cpu=$arch;;
+if [ -z "$ZSH_BIN_CPU" ]; then
+  case "$ZSH_BIN_ARCH" in
+    armv7l)         ZSH_BIN_CPU=armv7;;
+    aarch64)        ZSH_BIN_CPU=armv8-a;;
+    x86_64|amd64)   ZSH_BIN_CPU=x86-64;;
+    i386|i586|i686) ZSH_BIN_CPU=$ZSH_BIN_ARCH;;
     *)
       >&2 echo '[error] unable to infer target CPU architecture'
       >&2 echo 'Please specify explicitly with `-c CPU`.'
@@ -681,17 +784,17 @@ if [ -z "$cpu" ]; then
   esac
 fi
 
-kernel=$(uname -s)
-kernel=$(printf '%s' "$kernel" | tr '[A-Z]' '[a-z]')
+ZSH_BIN_KERNEL=$(uname -s)
+ZSH_BIN_KERNEL=$(printf '%s' "$ZSH_BIN_KERNEL" | tr '[A-Z]' '[a-z]')
 
-case "$kernel" in
+case "$ZSH_BIN_KERNEL" in
   linux)
-    if [ -z "$image" ]; then
-      case "$arch" in
-        x86_64)         image=alpine:3.9.5;;
-        i386|i586|i686) image=i386/alpine:3.9.5;;
-        armv7l)         image=arm32v7/alpine:3.9.5;;
-        aarch64)        image=arm64v8/alpine:3.9.5;;
+    if [ -z "$ZSH_BIN_IMAGE" ]; then
+      case "$ZSH_BIN_ARCH" in
+        x86_64)         ZSH_BIN_IMAGE=alpine:3.9.5;;
+        i386|i586|i686) ZSH_BIN_IMAGE=i386/alpine:3.9.5;;
+        armv7l)         ZSH_BIN_IMAGE=arm32v7/alpine:3.9.5;;
+        aarch64)        ZSH_BIN_IMAGE=arm64v8/alpine:3.9.5;;
         *)
           >&2 echo '[error] unable to infer docker image'
           >&2 echo 'Please specify explicitly with `-i IMAGE`.'
@@ -703,21 +806,43 @@ case "$kernel" in
       >&2 echo '[error] docker not found; please install and retry'
       exit 1
     fi
+    if [ -n "$ZSH_BIN_RESOURCES" ]; then
+      >&2 echo '[error] resource file (-r) is not supported on linux'
+      exit 1
+    fi
   ;;
   freebsd)
-    if [ -n "$image" ]; then
+    if [ -n "$ZSH_BIN_IMAGE" ]; then
       >&2 echo '[error] docker image (-i) is not supported on freebsd'
+      exit 1
+    fi
+    if [ -n "$ZSH_BIN_RESOURCES" ]; then
+      >&2 echo '[error] resource file (-r) is not supported on freebsd'
+      exit 1
+    fi
+  ;;
+  darwin)
+    if [ -n "$ZSH_BIN_IMAGE" ]; then
+      >&2 echo '[error] docker image (-i) is not supported on freebsd'
+      exit 1
+    fi
+    if [ -z "$ZSH_BIN_RESOURCES" ]; then
+      >&2 echo '[error] resource file (-r) is required on macOS'
       exit 1
     fi
   ;;
   msys_nt-*|mingw32_nt-*|mingw64_nt-*|cygwin_nt-*)
-    if ! printf '%s' "$kernel" | grep -Eqx '[^-]+-[0-9]+\.[0-9]+(-.*)?'; then
+    if ! printf '%s' "$ZSH_BIN_KERNEL" | grep -Eqx '[^-]+-[0-9]+\.[0-9]+(-.*)?'; then
       >&2 echo '[error] unsupported kernel, sorry!'
       exit 1
     fi
-    kernel=$(printf '%s' "$kernel" | sed 's/^\([^-]*-[0-9]*\.[0-9]*\).*/\1/')
-    if [ -n "$image" ]; then
+    ZSH_BIN_KERNEL=$(printf '%s' "$ZSH_BIN_KERNEL" | sed 's/^\([^-]*-[0-9]*\.[0-9]*\).*/\1/')
+    if [ -n "$ZSH_BIN_IMAGE" ]; then
       >&2 echo '[error] docker image (-i) is not supported on windows'
+      exit 1
+    fi
+    if [ -n "$ZSH_BIN_RESOURCES" ]; then
+      >&2 echo '[error] resource file (-r) is not supported on windows'
       exit 1
     fi
   ;;
@@ -729,29 +854,29 @@ esac
 
 >&2 echo "Building zsh..."
 >&2 echo ""
-[ -n "$image" ] && >&2 echo "  IMAGE=$image"
->&2 echo "  KERNEL=$kernel"
->&2 echo "  ARCH=$arch"
->&2 echo "  CPU=$cpu"
+[ -z "$ZSH_BIN_IMAGE" ] || >&2 echo "  IMAGE=$ZSH_BIN_IMAGE"
+>&2 echo "  KERNEL=$ZSH_BIN_KERNEL"
+>&2 echo "  ARCH=$ZSH_BIN_ARCH"
+>&2 echo "  CPU=$ZSH_BIN_CPU"
 
-case "$kernel" in
+case "$ZSH_BIN_KERNEL" in
   linux)
-    docker run                    \
-      -e ZSH_BIN_KERNEL="$kernel" \
-      -e ZSH_BIN_ARCH="$arch"     \
-      -e ZSH_BIN_CPU="$cpu"       \
-      -v "$PWD":/out              \
-      -w /out                     \
-      --tty                       \
-      --rm                        \
-      -- "$image" /bin/sh -uexc "$build"
+    docker run                                  \
+      -e ZSH_BIN_KERNEL="$ZSH_BIN_KERNEL"       \
+      -e ZSH_BIN_ARCH="$ZSH_BIN_ARCH"           \
+      -e ZSH_BIN_CPU="$ZSH_BIN_CPU"             \
+      -e ZSH_BIN_RESOURCES="$ZSH_BIN_RESOURCES" \
+      -v "$PWD":/out                            \
+      -w /out                                   \
+      --tty                                     \
+      --rm                                      \
+      -- "$ZSH_BIN_IMAGE" /bin/sh -uexc "$build"
   ;;
-  freebsd|msys*|mingw*|cygwin*)
-    ZSH_BIN_KERNEL="$kernel" ZSH_BIN_ARCH="$arch" ZSH_BIN_CPU="$cpu" \
-      /bin/sh -uexc "$build"
+  freebsd|darwin|msys*|mingw*|cygwin*)
+    eval "$build"
   ;;
   *)
-    >&2 echo "[internal error] unhandled kernel: $kernel";
+    >&2 echo "[internal error] unhandled kernel: $ZSH_BIN_KERNEL";
     exit 1
   ;;
 esac

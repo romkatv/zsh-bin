@@ -29,8 +29,7 @@ Or, if you prefer, follow [manual installation](#manual-installation) instructio
 Now you can invoke `~/.zsh-bin/bin/zsh` and it'll just work. You'll probably want to add
 `~/.zsh-bin/bin` to `PATH` for convenience.
 
-*Tip*: Append `-- -d /some/dir` to the installation command to install Zsh to an alternative
-directory.
+*Tip*: `install` has a few optional flags. Invoke it with `-h` to list them.
 
 ### Manual installation
 
@@ -38,13 +37,17 @@ directory.
 kernel=$(uname -s | tr '[A-Z]' '[a-z]')
 arch=$(uname -m | tr '[A-Z]' '[a-z]')
 name="zsh-5.8-${kernel}-${arch}"
-curl -fsSLO -- "https://github.com/romkatv/zsh-bin/releases/download/v2.1.2/${name}.tar.gz"
+curl -fsSLO -- "https://github.com/romkatv/zsh-bin/releases/download/v3.0.0/${name}.tar.gz"
 tar -xzf "$name".tar.gz
 rm "$name".tar.gz
 rm -rf ~/.zsh-bin
 mv "$name" ~/.zsh-bin
 ~/.zsh-bin/share/zsh/5.8/scripts/relocate
 ```
+
+The [install script](https://github.com/romkatv/zsh-bin/blob/master/install) has more robust logic
+for determining which archive to download. See its source code if the simple algorithm listed
+above gives you HTTP 404.
 
 If you move or rename `~/.zsh-bin`, you'll need to call `share/zsh/5.8/scripts/relocate/relocate`
 afterwards. See the last line in the instructions above.
@@ -55,7 +58,7 @@ afterwards. See the last line in the instructions above.
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/romkatv/zsh-bin/master/build)"
 ```
 
-`build` has a few optional flags. Invoke it with `-h` to list them.
+*Tip*: `build` has a few optional flags. Invoke it with `-h` to list them.
 
 On Linux build is done in a Docker container, so you'll need to install docker first. On non-Linux
 systems build is done on the host. In the latter case it's recommended to run the script in a

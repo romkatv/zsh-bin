@@ -30,6 +30,10 @@
 
 set -ue
 
+if [ -n "${ZSH_VERSION:-}" ]; then
+  emulate sh -o err_exit -o no_unset
+fi
+
 readonly url_base=https://github.com/romkatv/zsh-bin/releases/download/v3.0.0
 
 readonly archives='
@@ -55,15 +59,15 @@ Options:
 
   -d DIR  Install to this directory. Defaults to ~/.zsh-bin.
 
-  -q      Don't produce any output on success.
+  -q      Produce no output on success.
 
   -a ALGO Verify the integrity of the downloaded package with the specified
-          algorithm. ALGO can be "sha256" or "md5". Cannot be used with `-f`
-          and `-u`. This flag can be specified more than once. Installation
+          algorithm. ALGO can be "sha256" or "md5". Cannot be used with '-f'
+          and '-u'. This flag can be specified more than once. Installation
           script considers every algorithm in the listed order and stops once
           it finds one for which there is a local tool for performing the
           required integrity check. Installation is aborted if the signature
-          of the downloaded archive doesn't match or if there is no local
+          of the downloaded archive does not match or if there is no local
           tool to perform this check for any of the specified algrithms.
 
   -f FILE Install from a local file. FILE must point to *.tar.gz produced by
@@ -75,7 +79,11 @@ END
 )"
 
 absfile() {
-  ( [ -e "$1" ] && cd -- "${1%/*}" && d=$(pwd) && printf '%s/%s\n' "${d%/}" "${1##*/}" )
+  [ -e "$1" ]
+  local dir base
+  dir=$(dirname -- "$1")
+  base=$(basename -- "$1")
+  ( cd -- "$dir" && dir=$(pwd) && printf '%s/%s\n' "${dir%/}" "${base}" )
 }
 
 dir=
@@ -186,11 +194,12 @@ if [ -n "$dir" ]; then
     exit 1
   fi
 else
-  if [ ${HOME:-x} = x -o -n "${HOME##/*}" ]; then
-    >&2 echo "[error] invalid HOME: ${HOME:-}"
+  home="${HOME:-x}"
+  if [ "$home" = x -o -n "${home##/*}" ]; then
+    >&2 echo "[error] invalid HOME: $home"
     exit 1
   fi
-  dir="$HOME"/.zsh-bin
+  dir="$home"/.zsh-bin
 fi
 
 if [ -e "$dir" ]; then
@@ -331,7 +340,7 @@ if [ -z "$quiet" ]; then
 fi
 
 tar -xzf "$file"
-base=$(basename "${file%.tar.gz}")
+base=$(basename -- "${file%.tar.gz}")
 "$base"/share/zsh/5.8/scripts/relocate -d "$dir"
 
 if [ -z "$quiet" ]; then
