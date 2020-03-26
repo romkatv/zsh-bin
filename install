@@ -14,11 +14,9 @@
 #   -a ALGO Verify the integrity of the downloaded package with the specified
 #           algorithm. ALGO can be "sha256" or "md5". Cannot be used with '-f'
 #           and '-u'. This flag can be specified more than once. Installation
-#           script considers every algorithm in the listed order and stops once
-#           it finds one for which there is a local tool for performing the
-#           required integrity check. Installation is aborted if the signature
-#           of the downloaded archive does not match or if there is no local
-#           tool to perform this check for any of the specified algrithms.
+#           is aborted if there are no local tools for any of the requested
+#           algorithms or if signature does not match for at least one
+#           algorithm for which local tools are available.
 #
 #   -f FILE Install from a local file. FILE must point to *.tar.gz produced by
 #           the build script.
@@ -37,17 +35,18 @@ fi
 readonly url_base=https://github.com/romkatv/zsh-bin/releases/download/v3.0.0
 
 readonly archives='
-file:zsh-5.8-freebsd-amd64.tar.gz;         md5:xxx; sha256:xxx;
-file:zsh-5.8-linux-aarch64.tar.gz
-file:zsh-5.8-linux-armv7l.tar.gz
-file:zsh-5.8-linux-i386.tar.gz
-file:zsh-5.8-linux-i586.tar.gz
-file:zsh-5.8-linux-i686.tar.gz
-file:zsh-5.8-linux-x86_64.tar.gz
-file:zsh-5.8-cygwin_nt-10.0-i686.tar.gz
-file:zsh-5.8-cygwin_nt-10.0-x86_64.tar.gz
-file:zsh-5.8-msys_nt-10.0-i686.tar.gz
-file:zsh-5.8-msys_nt-10.0-x86_64.tar.gz'
+file:zsh-5.8-cygwin_nt-10.0-i686.tar.gz;   md5:d82f276f2093c23350c72b228ac46674; sha256:42a9f0efc5ffaae0f2d0e89684e9cc03f62e7251c9eaf4a1e16d5d70b281d31f;
+file:zsh-5.8-cygwin_nt-10.0-x86_64.tar.gz; md5:429e8598fc7602b5761a8be1016480a8; sha256:e642cf78d4823d510967c0d874f09862f1d4b5773be027d710d2a78b8015ce19;
+file:zsh-5.8-darwin-x86_64.tar.gz;         md5:f155b7d18ccce907c5d9d5429f153fc4; sha256:248f4950c81af8511809a2963fa34264c7ece31ecfe0898b79a72a6569c4bc1e;
+file:zsh-5.8-freebsd-amd64.tar.gz;         md5:fc50a9b0dfa33411fbff7f5c3dabe1f8; sha256:34e2e991bde336a779814b0dc6276fea3932853502f632c02013c4c0ae41de0f;
+file:zsh-5.8-linux-aarch64.tar.gz;         md5:062a06c74330d5fcafaac3729508cc83; sha256:564a355f490ade23502370b58259acaa1ab67c04f5a23aa01f38061037ae9090;
+file:zsh-5.8-linux-armv7l.tar.gz;          md5:030d84cc1f55a50ae8e37091c9b835a6; sha256:12c8d15712734e83d4e654643377d9be19ec85dc0e947d78f293a39e316f599d;
+file:zsh-5.8-linux-i386.tar.gz;            md5:fd7bfb6764574b1eebc8dc77f0effee1; sha256:6cf5d8909c16c0395948e4491a6665fc38a083275e9cbed1215fdd74eb4cb262;
+file:zsh-5.8-linux-i586.tar.gz;            md5:1c7d3fbc07685abb3bb37d070ac19ac5; sha256:228f4c97e8cba28b73e849c661a28e0ad0c64a36ec9baa7ba7a4df301eefe2fd;
+file:zsh-5.8-linux-i686.tar.gz;            md5:1bb256b15c6019ddc6063aa3aa6b975c; sha256:3bb34d9adacb2337b11e75e28c35c683ea1d859dde64ce5446c885d302981d0b;
+file:zsh-5.8-linux-x86_64.tar.gz;          md5:5a27fb866bbcf3ebac7a48c594ef7d31; sha256:3ed1f41f9746cda82ecf187379cf2faf530ce2e637595698fe2e504589da9667;
+file:zsh-5.8-msys_nt-10.0-i686.tar.gz;     md5:56abde2aaddc965a6784101cb3de50b8; sha256:26d4edec86272c873576c0815c00d1e2c969d7864d3a6a2001a8436d78694e9b;
+file:zsh-5.8-msys_nt-10.0-x86_64.tar.gz;   md5:786ae15c6425e3beaca2e7ca31f5edb5; sha256:4b58ea485f8f1303ed88a2c6cf51db79a4bd28bb516e834515f1bdbc262ccfff;'
 
 usage="$(cat <<\END
 Usage: install [-d DIR] [-q] [[-a ALGO]...]|[-f FILE]|[-u URL]
@@ -64,11 +63,9 @@ Options:
   -a ALGO Verify the integrity of the downloaded package with the specified
           algorithm. ALGO can be "sha256" or "md5". Cannot be used with '-f'
           and '-u'. This flag can be specified more than once. Installation
-          script considers every algorithm in the listed order and stops once
-          it finds one for which there is a local tool for performing the
-          required integrity check. Installation is aborted if the signature
-          of the downloaded archive does not match or if there is no local
-          tool to perform this check for any of the specified algrithms.
+          is aborted if there are no local tools for any of the requested
+          algorithms or if signature does not match for at least one
+          algorithm for which local tools are available.
 
   -f FILE Install from a local file. FILE must point to *.tar.gz produced by
           the build script.
@@ -88,8 +85,7 @@ absfile() {
 
 dir=
 quiet=
-check_sha256=
-check_md5=
+algos=
 url=
 file=
 
@@ -119,19 +115,12 @@ while getopts ':hqd:a:f:u:' opt "$@"; do
     ;;
     a)
       case "$OPTARG" in
-        sha256)
-          if [ -n "$check_sha256" ]; then
+        sha256|md5)
+          if [ -n "$algos" -a -z "${algos##*$OPTARG*}" ]; then
             >&2 echo "[error] duplicate option: $opt $OPTARG"
             exit 1
           fi
-          check_sha256=1
-        ;;
-        md5)
-          if [ -n "$check_md5" ]; then
-            >&2 echo "[error] duplicate option: $opt $OPTARG"
-            exit 1
-          fi
-          check_md5=1
+          algos="$algos $OPTARG"
         ;;
         *)
           if [ -z "$OPTARG" ]; then
@@ -177,7 +166,7 @@ if [ "$OPTIND" -le $# ]; then
   return 1
 fi
 
-if [ -n "$check_sha256" -o -n "$check_md5" ]; then
+if [ -n "$algos" ]; then
   if [ -n "$file" ]; then
     >&2 echo "[error] incompatible options: -f and -a"
     exit 1
@@ -267,70 +256,67 @@ if [ -n "$url" ]; then
   file="$tmpdir/${url##*/}"
 fi
 
-if [ -z "$quiet" ]; then
-  if [ -n "$check_sha256" -o -n "$check_md5" ]; then
+if [ -n "$algos" ]; then
+  if [ -z "$quiet" ]; then
     echo "Verifying archive integrity"
   fi
+
+  for algo in $algos; do
+    hash=
+    case "$algo" in
+      sha256)
+        if command -v shasum >/dev/null 2>/dev/null; then
+          hash="$(shasum -b -a 256 -- "$file")"
+          hash="sha256:${hash%% *}"
+        elif command -v sha256sum >/dev/null 2>/dev/null; then
+          hash="$(sha256sum -b -- "$file")"
+          hash="sha256:${hash%% *}"
+        elif command -v sha256 >/dev/null 2>/dev/null; then
+          # Ignore sha256 output if it's from hashalot. It's incompatible.
+          hash="$(sha256 -- "$file" </dev/null)"
+          if [ ${#hash} -lt 64 ]; then
+            hash=
+          else
+            hash="sha256:${hash##* }"
+          fi
+        fi
+      ;;
+      md5)
+        if command -v md5sum >/dev/null 2>/dev/null; then
+          hash="$(md5sum -b -- "$file")"
+          hash="md5:${hash%% *}"
+        elif command -v md5 >/dev/null 2>/dev/null; then
+          hash="$(md5 -- "$file")"
+          hash="md5:${hash##* }"
+        fi
+      ;;
+      *)
+        >&2 echo "[internal error] unhandled algorithm: $algo"
+        exit 1
+      ;;
+    esac
+    if [ -n "$hash" ]; then
+      if [ -n "${archives##*$hash;*}" ]; then
+        >&2 echo "[error] $algo signature mismatch"
+        >&2 echo ""
+        >&2 echo "Expected:"
+        >&2 echo ""
+        >&2 echo "  $(printf "%s" "$archives" | grep -F "${file##*/}")"
+        >&2 echo ""
+        >&2 echo "Found:"
+        >&2 echo ""
+        >&2 echo "  file:${file##*/}; $hash;"
+        exit 1
+      fi
+      if [ -z "$quiet" ]; then
+        echo "$algo signature matches"
+      fi
+      algos=
+    fi
+  done
 fi
 
-if [ -n "$check_sha256" ]; then
-  sha256=none
-  if command -v shasum >/dev/null 2>/dev/null; then
-    sha256="$(shasum -b -a 256 -- "$file")"
-    sha256="${sha256%% *}"
-  elif command -v sha256sum >/dev/null 2>/dev/null; then
-    sha256="$(sha256sum -b -- "$file")"
-    sha256="${sha256%% *}"
-  elif command -v sha256 >/dev/null 2>/dev/null; then
-    hasher="$(command -v sha256)"
-    hasher="$(readlink -- "$hasher" 2>/dev/null || true)"
-    if [ "${hasher##*/}" != hashalot ]; then
-      sha256="$(sha256 -- "$file")"
-      sha256="${sha256##* }"
-    fi
-  fi
-  if [ "$sha256" != none ]; then
-    if [ -n "${archives##*sha256:$sha256;*}" ]; then
-      >&2 echo "[error] sha256 signature mismatch"
-      >&2 echo ""
-      >&2 echo "  file:   ${file##*/}"
-      >&2 echo "  sha256: ${sha256}"
-      exit 1
-    fi
-    if [ -z "$quiet" ]; then
-      echo "SHA256 signature matches"
-    fi
-    check_sha256=
-    check_md5=
-  fi
-fi
-
-if [ -n "$check_md5" ]; then
-  md5=none
-  if command -v md5sum >/dev/null 2>/dev/null; then
-    md5="$(md5sum -b -- "$file")"
-    md5="${md5%% *}"
-  elif command -v md5 >/dev/null 2>/dev/null; then
-    md5="$(md5 -- "$file")"
-    md5="${md5##* }"
-  fi
-  if [ "$md5" != none ]; then
-    if [ -n "${archives##*md5:$md5;*}" ]; then
-      >&2 echo "[error] md5 signature mismatch"
-      >&2 echo ""
-      >&2 echo "  file: ${file##*/}"
-      >&2 echo "  md5:  ${md5}"
-      exit 1
-    fi
-    if [ -z "$quiet" ]; then
-      echo "MD5 signature matches"
-    fi
-    check_sha256=
-    check_md5=
-  fi
-fi
-
-if [ -n "$check_sha256" -o -n "$check_md5" ]; then
+if [ -n "$algos" ]; then
   >&2 echo "[error] unable to verify archive integrity: no suitable tools available"
   exit 1
 fi
