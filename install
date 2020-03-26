@@ -11,12 +11,11 @@
 #
 #   -q      Produce no output on success.
 #
-#   -a ALGO Verify the integrity of the downloaded package with the specified
-#           algorithm. ALGO can be "sha256" or "md5". Cannot be used with '-f'
-#           and '-u'. This flag can be specified more than once. Installation
-#           is aborted if there are no local tools for any of the requested
-#           algorithms or if signature does not match for at least one
-#           algorithm for which local tools are available.
+#   -a ALGO Abort installation if integrity of the downloaded package cannot
+#           be verified with the specified algorithm. ALGO can be "sha256" or
+#           "md5". Cannot be combined with '-f' and '-u'. If '-a' is specified
+#           more than once, at least one algorithm must succeed or
+#           installation is be aborted.
 #
 #   -f FILE Install from a local file. FILE must point to *.tar.gz produced by
 #           the build script.
@@ -60,12 +59,11 @@ Options:
 
   -q      Produce no output on success.
 
-  -a ALGO Verify the integrity of the downloaded package with the specified
-          algorithm. ALGO can be "sha256" or "md5". Cannot be used with '-f'
-          and '-u'. This flag can be specified more than once. Installation
-          is aborted if there are no local tools for any of the requested
-          algorithms or if signature does not match for at least one
-          algorithm for which local tools are available.
+  -a ALGO Abort installation if integrity of the downloaded package cannot
+          be verified with the specified algorithm. ALGO can be "sha256" or
+          "md5". Cannot be combined with '-f' and '-u'. If '-a' is specified
+          more than once, at least one algorithm must succeed or
+          installation is be aborted.
 
   -f FILE Install from a local file. FILE must point to *.tar.gz produced by
           the build script.
@@ -116,11 +114,11 @@ while getopts ':hqd:a:f:u:' opt "$@"; do
     a)
       case "$OPTARG" in
         sha256|md5)
-          if [ -n "$algos" -a -z "${algos##*$OPTARG*}" ]; then
+          if [ -n "$algos" -a -z "${algos##*<$OPTARG>*}" ]; then
             >&2 echo "[error] duplicate option: -$opt $OPTARG"
             exit 1
           fi
-          algos="$algos $OPTARG"
+          algos="$algos<$OPTARG>"
         ;;
         *)
           >&2 echo "[error] incorrect value of -$opt: $OPTARG"
@@ -235,6 +233,10 @@ if [ -z "$file" -a -z "$url" ]; then
     >&2 echo "like to build it yourself."
     exit 1
   fi
+
+  check_sig=1
+else
+  check_sig=0
 fi
 
 if [ -n "$url" ]; then
@@ -254,12 +256,12 @@ if [ -n "$url" ]; then
   file="$tmpdir/${url##*/}"
 fi
 
-if [ -n "$algos" ]; then
+if [ "$check_sig" = 1 ]; then
   if [ -z "$quiet" ]; then
     echo "Verifying archive integrity"
   fi
 
-  for algo in $algos; do
+  for algo in sha256 md5; do
     hash=
     case "$algo" in
       sha256)
@@ -294,7 +296,7 @@ if [ -n "$algos" ]; then
       ;;
     esac
     if [ -n "$hash" ]; then
-      if [ -n "${archives##*$hash;*}" ]; then
+      if [ -n "${archives##* $hash;*}" ]; then
         >&2 echo "[error] $algo signature mismatch"
         >&2 echo ""
         >&2 echo "Expected:"
@@ -309,7 +311,7 @@ if [ -n "$algos" ]; then
       if [ -z "$quiet" ]; then
         echo "$algo signature matches"
       fi
-      algos=
+      algos="${algos##*<$algo>*}"
     else
       if [ -z "$quiet" ]; then
         echo "No local tools available to verify $algo signature"
