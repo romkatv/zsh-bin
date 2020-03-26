@@ -123,10 +123,8 @@ while getopts ':hqd:a:f:u:' opt "$@"; do
           algos="$algos $OPTARG"
         ;;
         *)
-          if [ -z "$OPTARG" ]; then
-            >&2 echo "[error] incorrect value of $opt: $OPTARG"
-            exit 1
-          fi
+          >&2 echo "[error] incorrect value of $opt: $OPTARG"
+          exit 1
         ;;
       esac
     ;;
