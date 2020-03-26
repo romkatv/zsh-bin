@@ -11,8 +11,7 @@
 
 ## Installation
 
-To install the latest version of Zsh on Linux or FreeBSD without root access, run the following
-command:
+To install the latest version of Zsh without, run the following command:
 
 ```sh
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/romkatv/zsh-bin/master/install)"
