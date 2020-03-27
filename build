@@ -19,7 +19,7 @@ if [ -n "${ZSH_VERSION:-}" ]; then
 fi
 
 usage="$(cat <<\END
-Usage: build [-m ARCH] [-c CPU] [-i IMAGE] [-r FILE]
+Usage: build [-m ARCH] [-c CPU] [-i IMAGE]
 
 Creates an archive containing statically-linked, hermetic,
 relocatable Zsh 5.8. Installation of Zsh from the archive
