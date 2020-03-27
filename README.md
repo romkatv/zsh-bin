@@ -248,6 +248,11 @@ Builds are done natively, meaning that the target kernel and CPU architecture mu
 on the host. Given a Linux-x86_64 host, you can build Zsh for Linux-x86_64 and Linux-i686 but
 not for Linux-aarch64 or Darwin-x86_64.
 
+All archives in [releases](https://github.com/romkatv/zsh-bin/releases) are produced by [mbuild](
+  https://github.com/romkatv/zsh-bin/blob/release/mbuild). This script builds Zsh on remote machines
+over SSH. It's not an officially supported script, so please don't expect it to be stable or well
+documented.
+
 ---
 
 Zsh from zsh-bin doesn't read global rc files from anywhere. It does read user rc files of course.
