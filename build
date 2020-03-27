@@ -250,9 +250,9 @@ case "$ZSH_BIN_KERNEL" in
   darwin)
     opt=/usr/local/opt
     mkdir -- "$workdir"/lib
-    ln -s "$opt"/libiconv/lib/libiconv.a   "$workdir"/lib
-    ln -s "$opt"/ncurses/lib/libncursesw.a "$workdir"/lib
-    ln -s "$opt"/pcre/lib/libpcre.a        "$workdir"/lib
+    ln -s -- "$opt"/libiconv/lib/libiconv.a   "$workdir"/lib
+    ln -s -- "$opt"/ncurses/lib/libncursesw.a "$workdir"/lib
+    ln -s -- "$opt"/pcre/lib/libpcre.a        "$workdir"/lib
     CPPFLAGS="-I$opt/libiconv/include -I$opt/ncurses/include -I$opt/pcre/include"
     LDFLAGS="-L$workdir/lib"
     LIBS="-lpcre"
@@ -400,7 +400,7 @@ else
 fi
 
 strip "$workdir/$name"/bin/zsh
-rm "$workdir/$name"/bin/zsh-5.8
+rm -- "$workdir/$name"/bin/zsh-5.8
 
 if [ -d /usr/share/terminfo ]; then
   cp -r -- /usr/share/terminfo "$workdir/$name"/share/
