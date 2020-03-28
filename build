@@ -36,6 +36,8 @@ Options:
             if not set explicitly
   -i IMAGE  docker image used for building zsh; inferred from ARCH
             if not set explicitly
+  -d CMD    use this command instead of 'docker'; it must understand
+            the same command line arguments
 END
 )"
 
@@ -698,8 +700,9 @@ absfile() {
 ZSH_BIN_ARCH=
 ZSH_BIN_CPU=
 ZSH_BIN_IMAGE=
+docker=
 
-while getopts ':m:c:i:h' opt "$@"; do
+while getopts ':m:c:i:d:h' opt "$@"; do
   case "$opt" in
     h)
       printf '%s\n' "$usage"
@@ -737,6 +740,17 @@ while getopts ':m:c:i:h' opt "$@"; do
         exit 1
       fi
       ZSH_BIN_IMAGE="$OPTARG"
+    ;;
+    d)
+      if [ -n "$docker" ]; then
+        >&2 echo "[error] duplicate option: -$opt"
+        exit 1
+      fi
+      if [ -z "$OPTARG" ]; then
+        >&2 echo "[error] incorrect value of -$opt: $OPTARG"
+        exit 1
+      fi
+      docker="$OPTARG"
     ;;
     \?) >&2 echo "[error] invalid option: -$OPTARG"           ; exit 1;;
     :)  >&2 echo "[error] missing required argument: -$OPTARG"; exit 1;;
@@ -786,9 +800,17 @@ case "$ZSH_BIN_KERNEL" in
         ;;
       esac
     fi
-    if ! command -v docker >/dev/null 2>&1; then
-      >&2 echo '[error] docker not found; please install and retry'
-      exit 1
+    : "${docker:=docker}"
+    if [ -z "${docker##*/*}" ]; then
+      if [ ! -x "$docker" ]; then
+        >&2 echo "[error] not an executable file: $docker"
+        exit 1
+      fi
+    else
+      if ! command -v "$docker" >/dev/null 2>&1; then
+        >&2 echo "[error] command not found: $docker"
+        exit 1
+      fi
     fi
   ;;
   freebsd)
@@ -796,10 +818,18 @@ case "$ZSH_BIN_KERNEL" in
       >&2 echo '[error] docker image (-i) is not supported on freebsd'
       exit 1
     fi
+    if [ -n "$docker" ]; then
+      >&2 echo '[error] docker (-d) is not supported on freebsd'
+      exit 1
+    fi
   ;;
   darwin)
     if [ -n "$ZSH_BIN_IMAGE" ]; then
-      >&2 echo '[error] docker image (-i) is not supported on freebsd'
+      >&2 echo '[error] docker image (-i) is not supported on macOS'
+      exit 1
+    fi
+    if [ -n "$docker" ]; then
+      >&2 echo '[error] docker (-d) is not supported on macOS'
       exit 1
     fi
   ;;
@@ -813,6 +843,10 @@ case "$ZSH_BIN_KERNEL" in
       >&2 echo '[error] docker image (-i) is not supported on windows'
       exit 1
     fi
+    if [ -n "$docker" ]; then
+      >&2 echo '[error] docker (-d) is not supported on windows'
+      exit 1
+    fi
   ;;
   *)
     >&2 echo '[error] unsupported kernel, sorry!'
@@ -822,6 +856,7 @@ esac
 
 >&2 echo "Building zsh..."
 >&2 echo ""
+[ -z "$docker"        ] || >&2 echo "  DOCKER=$docker"
 [ -z "$ZSH_BIN_IMAGE" ] || >&2 echo "  IMAGE=$ZSH_BIN_IMAGE"
 >&2 echo "  KERNEL=$ZSH_BIN_KERNEL"
 >&2 echo "  ARCH=$ZSH_BIN_ARCH"
@@ -829,7 +864,7 @@ esac
 
 case "$ZSH_BIN_KERNEL" in
   linux)
-    docker run                            \
+    "$docker" run                         \
       -e ZSH_BIN_KERNEL="$ZSH_BIN_KERNEL" \
       -e ZSH_BIN_ARCH="$ZSH_BIN_ARCH"     \
       -e ZSH_BIN_CPU="$ZSH_BIN_CPU"       \
