@@ -268,3 +268,7 @@ there is no `yodl` for macOS and porting it is a daunting task. To get out of th
 pulls man pages and help files from `zsh-5.8-linux-x86_64.tar.gz` and embeds them in
 `zsh-5.8-darwin-x86_64.tar.gz`. So if you are trying to reproduce the macOS build, you'll need to
 start by building Zsh for Linux-x86_64.
+
+---
+
+Zsh from zsh-bin cannot load user-defined modules. This probably can be fixed.
