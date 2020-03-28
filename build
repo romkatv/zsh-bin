@@ -697,10 +697,11 @@ absfile() {
   ( cd -- "$dir" && dir="$(pwd)" && printf '%s/%s\n' "${dir%/}" "${base}" )
 }
 
+image=
+docker=
+
 ZSH_BIN_ARCH=
 ZSH_BIN_CPU=
-ZSH_BIN_IMAGE=
-docker=
 
 while getopts ':m:c:i:d:h' opt "$@"; do
   case "$opt" in
@@ -731,7 +732,7 @@ while getopts ':m:c:i:d:h' opt "$@"; do
       ZSH_BIN_CPU="$OPTARG"
     ;;
     i)
-      if [ -n "$ZSH_BIN_IMAGE" ]; then
+      if [ -n "$image" ]; then
         >&2 echo "[error] duplicate option: -$opt"
         exit 1
       fi
@@ -739,7 +740,7 @@ while getopts ':m:c:i:d:h' opt "$@"; do
         >&2 echo "[error] incorrect value of -$opt: $OPTARG"
         exit 1
       fi
-      ZSH_BIN_IMAGE="$OPTARG"
+      image="$OPTARG"
     ;;
     d)
       if [ -n "$docker" ]; then
@@ -787,12 +788,12 @@ ZSH_BIN_KERNEL="$(printf '%s' "$ZSH_BIN_KERNEL" | tr '[A-Z]' '[a-z]')"
 
 case "$ZSH_BIN_KERNEL" in
   linux)
-    if [ -z "$ZSH_BIN_IMAGE" ]; then
+    if [ -z "$image" ]; then
       case "$ZSH_BIN_ARCH" in
-        x86_64)         ZSH_BIN_IMAGE=alpine:3.9.5;;
-        i386|i586|i686) ZSH_BIN_IMAGE=i386/alpine:3.9.5;;
-        armv7l)         ZSH_BIN_IMAGE=arm32v7/alpine:3.9.5;;
-        aarch64)        ZSH_BIN_IMAGE=arm64v8/alpine:3.9.5;;
+        x86_64)         image=alpine:3.9.5;;
+        i386|i586|i686) image=i386/alpine:3.9.5;;
+        armv7l)         image=arm32v7/alpine:3.9.5;;
+        aarch64)        image=arm64v8/alpine:3.9.5;;
         *)
           >&2 echo '[error] unable to infer docker image'
           >&2 echo 'Please specify explicitly with `-i IMAGE`.'
@@ -814,7 +815,7 @@ case "$ZSH_BIN_KERNEL" in
     fi
   ;;
   freebsd)
-    if [ -n "$ZSH_BIN_IMAGE" ]; then
+    if [ -n "$image" ]; then
       >&2 echo '[error] docker image (-i) is not supported on freebsd'
       exit 1
     fi
@@ -824,7 +825,7 @@ case "$ZSH_BIN_KERNEL" in
     fi
   ;;
   darwin)
-    if [ -n "$ZSH_BIN_IMAGE" ]; then
+    if [ -n "$image" ]; then
       >&2 echo '[error] docker image (-i) is not supported on macOS'
       exit 1
     fi
@@ -839,7 +840,7 @@ case "$ZSH_BIN_KERNEL" in
       exit 1
     fi
     ZSH_BIN_KERNEL="$(printf '%s' "$ZSH_BIN_KERNEL" | sed 's/^\([^-]*-[0-9]*\.[0-9]*\).*/\1/')"
-    if [ -n "$ZSH_BIN_IMAGE" ]; then
+    if [ -n "$image" ]; then
       >&2 echo '[error] docker image (-i) is not supported on windows'
       exit 1
     fi
@@ -856,8 +857,8 @@ esac
 
 >&2 echo "Building zsh..."
 >&2 echo ""
-[ -z "$docker"        ] || >&2 echo "  DOCKER=$docker"
-[ -z "$ZSH_BIN_IMAGE" ] || >&2 echo "  IMAGE=$ZSH_BIN_IMAGE"
+[ -z "$docker" ] || >&2 echo "  DOCKER=$docker"
+[ -z "$image"  ] || >&2 echo "  IMAGE=$image"
 >&2 echo "  KERNEL=$ZSH_BIN_KERNEL"
 >&2 echo "  ARCH=$ZSH_BIN_ARCH"
 >&2 echo "  CPU=$ZSH_BIN_CPU"
@@ -871,7 +872,7 @@ case "$ZSH_BIN_KERNEL" in
       -v "$PWD":/out                      \
       -w /out                             \
       --rm                                \
-      -- "$ZSH_BIN_IMAGE" /bin/sh -uexc "$build"
+      -- "$image" /bin/sh -uexc "$build"
   ;;
   freebsd|darwin|msys*|mingw*|cygwin*)
     eval "$build"
