@@ -220,22 +220,36 @@ you are curious.
 
 ## Limitations
 
-The build script doesn't work if `/bin/sh` is bash v4.4 or older. Use a newer version of bash or
-a different interpreter. Try `zsh`, `dash` and `ash`. You might have one of these already installed.
-
-This limitation can be removed but the motivation is rather low for doing this. There is no need
-for the build script to be super portable. The install script and `relocate` are a different matter.
-They must be very portable and they are. They work on older versions of bash just fine.
+Zsh from zsh-bin cannot load user-defined compiled modules. There is no way to guarantee that
+user-defined modules have been linked with the same libc as `zsh`, so it's unsafe to load them.
+This limitation likely cannot be removed.
 
 ---
 
-Not all zsh modules are enabled on all platforms:
+Not all standard zsh modules are enabled on all platforms:
 
 - `zsh/db_gdbm` is enabled only on Linux.
 - `zsh/attr` is disabled on FreeBSD.
 - `zsh/pcre` is disabled on Cygwin.
 
 This can be fixed. Please open an issue or better yet send a PR if you care.
+
+---
+
+Zsh from zsh-bin doesn't read global rc files from anywhere. It does read user rc files of course.
+
+This can be changed. An empty `etc` directory could be added to the archive, from which Zsh would
+source `zshenv` and similar files if they exist. Please open an issue or better yet send a PR if you
+care.
+
+---
+
+The build script doesn't work if `/bin/sh` is bash v4.4 or older. Use a newer version of bash or
+a different interpreter. Try `zsh`, `dash` and `ash`. You might have one of these already installed.
+
+This limitation can be removed but the motivation is rather low for doing this. There is no need
+for the build script to be super portable. The install script and `relocate` are a different matter.
+They must be very portable and they are. They work on older versions of bash just fine.
 
 ---
 
@@ -255,20 +269,8 @@ documented.
 
 ---
 
-Zsh from zsh-bin doesn't read global rc files from anywhere. It does read user rc files of course.
-
-This can be changed. An empty `etc` directory could be added to the archive, from which Zsh would
-source `zshenv` and similar files if they exist. Please open an issue or better yet send a PR if you
-care.
-
----
-
 The build script doesn't know how to build man pages and help files on macOS. The problem is that
 there is no `yodl` for macOS and porting it is a daunting task. To get out of this conundrum `build`
 pulls man pages and help files from `zsh-5.8-linux-x86_64.tar.gz` and embeds them in
 `zsh-5.8-darwin-x86_64.tar.gz`. So if you are trying to reproduce the macOS build, you'll need to
 start by building Zsh for Linux-x86_64.
-
----
-
-Zsh from zsh-bin cannot load user-defined modules. This probably can be fixed.
