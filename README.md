@@ -36,7 +36,7 @@ Add `~/.zsh-bin/bin` to `PATH` and type `zsh` to start Zsh.
 kernel=$(uname -s | tr '[A-Z]' '[a-z]')
 arch=$(uname -m | tr '[A-Z]' '[a-z]')
 name="zsh-5.8-${kernel}-${arch}"
-curl -fsSLO -- "https://github.com/romkatv/zsh-bin/releases/download/v3.0.0/${name}.tar.gz"
+curl -fsSLO -- "https://github.com/romkatv/zsh-bin/releases/download/v3.0.1/${name}.tar.gz"
 tar -xzf "$name".tar.gz
 rm "$name".tar.gz
 rm -rf ~/.zsh-bin

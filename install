@@ -31,21 +31,21 @@ if [ -n "${ZSH_VERSION:-}" ]; then
   emulate sh -o err_exit -o no_unset
 fi
 
-readonly url_base=https://github.com/romkatv/zsh-bin/releases/download/v3.0.0
+readonly url_base=https://github.com/romkatv/zsh-bin/releases/download/v3.0.1
 
 readonly archives='
-file:zsh-5.8-cygwin_nt-10.0-i686.tar.gz;   md5:d82f276f2093c23350c72b228ac46674; sha256:42a9f0efc5ffaae0f2d0e89684e9cc03f62e7251c9eaf4a1e16d5d70b281d31f;
-file:zsh-5.8-cygwin_nt-10.0-x86_64.tar.gz; md5:429e8598fc7602b5761a8be1016480a8; sha256:e642cf78d4823d510967c0d874f09862f1d4b5773be027d710d2a78b8015ce19;
-file:zsh-5.8-darwin-x86_64.tar.gz;         md5:f155b7d18ccce907c5d9d5429f153fc4; sha256:248f4950c81af8511809a2963fa34264c7ece31ecfe0898b79a72a6569c4bc1e;
-file:zsh-5.8-freebsd-amd64.tar.gz;         md5:fc50a9b0dfa33411fbff7f5c3dabe1f8; sha256:34e2e991bde336a779814b0dc6276fea3932853502f632c02013c4c0ae41de0f;
-file:zsh-5.8-linux-aarch64.tar.gz;         md5:062a06c74330d5fcafaac3729508cc83; sha256:564a355f490ade23502370b58259acaa1ab67c04f5a23aa01f38061037ae9090;
-file:zsh-5.8-linux-armv7l.tar.gz;          md5:030d84cc1f55a50ae8e37091c9b835a6; sha256:12c8d15712734e83d4e654643377d9be19ec85dc0e947d78f293a39e316f599d;
-file:zsh-5.8-linux-i386.tar.gz;            md5:fd7bfb6764574b1eebc8dc77f0effee1; sha256:6cf5d8909c16c0395948e4491a6665fc38a083275e9cbed1215fdd74eb4cb262;
-file:zsh-5.8-linux-i586.tar.gz;            md5:1c7d3fbc07685abb3bb37d070ac19ac5; sha256:228f4c97e8cba28b73e849c661a28e0ad0c64a36ec9baa7ba7a4df301eefe2fd;
-file:zsh-5.8-linux-i686.tar.gz;            md5:1bb256b15c6019ddc6063aa3aa6b975c; sha256:3bb34d9adacb2337b11e75e28c35c683ea1d859dde64ce5446c885d302981d0b;
-file:zsh-5.8-linux-x86_64.tar.gz;          md5:5a27fb866bbcf3ebac7a48c594ef7d31; sha256:3ed1f41f9746cda82ecf187379cf2faf530ce2e637595698fe2e504589da9667;
-file:zsh-5.8-msys_nt-10.0-i686.tar.gz;     md5:56abde2aaddc965a6784101cb3de50b8; sha256:26d4edec86272c873576c0815c00d1e2c969d7864d3a6a2001a8436d78694e9b;
-file:zsh-5.8-msys_nt-10.0-x86_64.tar.gz;   md5:786ae15c6425e3beaca2e7ca31f5edb5; sha256:4b58ea485f8f1303ed88a2c6cf51db79a4bd28bb516e834515f1bdbc262ccfff;'
+file:zsh-5.8-cygwin_nt-10.0-i686.tar.gz;   md5:3f8bdf8c53d90b2113e7c588bcd24737; sha256:a7236a12b2351cf0461b6e7d46ea50a4dc51be89ea895daea9fd5c80f5178127;
+file:zsh-5.8-cygwin_nt-10.0-x86_64.tar.gz; md5:4f23789b8545667e81fd325e66417469; sha256:f586cb71155b500b2d956b8699482b2d98e7b8df0828fe930384dd4ec7e25159;
+file:zsh-5.8-darwin-x86_64.tar.gz;         md5:7512ce659a89c8ad4364cfcd23f58171; sha256:f746da5983c28765b3bd590d505968bb7acb2682412bdca0cce709fd87958336;
+file:zsh-5.8-freebsd-amd64.tar.gz;         md5:caa8c128228191a0a87f5009bcdeb45c; sha256:ed95b7b97fa84dba3eef94df6876b545c6301d5b14c9bf3c78b011a87d0bb29e;
+file:zsh-5.8-linux-aarch64.tar.gz;         md5:0338240a28505b6b03fcb6c2a11023fd; sha256:3dd9e777b7d6df2c65b7a5864c74871e65c123e673531801e6b4152bae484f88;
+file:zsh-5.8-linux-armv7l.tar.gz;          md5:5799285a600acc192375a1a76483c7a3; sha256:4fd7f5178478d6e70766113f141fa0288cd9eee84c952c6cdeda00e4545a27da;
+file:zsh-5.8-linux-i386.tar.gz;            md5:eaff316a70279d11ea41465c2a45de09; sha256:f35237b844e83d4517020e6119456597fda323ec103da08b9ea73ad619ca7314;
+file:zsh-5.8-linux-i586.tar.gz;            md5:9d9cd6c133a5b3ac9c01d058fcc03749; sha256:ad1011e4af5b4407abb3fb4819b276a94ddd5a48a75147bfd4172545c5c9236e;
+file:zsh-5.8-linux-i686.tar.gz;            md5:c9572f927d1c4238a3b88b2c55bd403c; sha256:de4440a6ff88ee0004b67707274fb36d26bf67489cc94781cdd7791addca8440;
+file:zsh-5.8-linux-x86_64.tar.gz;          md5:093a5caa31db9a383c7b5bfd3a3ed353; sha256:8bc7e531dd88b1cd2e2e879840d0e73866ff90ade84c556a420231eda380208a;
+file:zsh-5.8-msys_nt-10.0-i686.tar.gz;     md5:16f6b3aefbcdada9edd4711402948302; sha256:e1a5b72dedfe5ad749b96b59ec6a52c32540a37d9183de11c84e747ce10911ab;
+file:zsh-5.8-msys_nt-10.0-x86_64.tar.gz;   md5:635716bc7be6560a567a7836319ca629; sha256:d9df06aeada673489001c45b39186056730f2321f0087598d3d27b5e000dcc14;'
 
 usage="$(cat <<\END
 Usage: install [-d DIR] [-q] [[-a ALGO]...]|[-f FILE]|[-u URL]
