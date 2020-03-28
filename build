@@ -81,7 +81,7 @@ libiconv_sha256=e6a1b1b589654277ee790cce3734f07876ac4ccfaecbee8afa0b649cf529cc04
 icmake_sha256=7c5c091f58f576da580238c5e3636e2038d9ecf5efb6562ae7e402910d9036e6
 yodl_sha256=0118efd6f05ddeed4910bb5e280a37a4d8e5c2f42fb2009c840b3d5c70f700f8
 zsh_sha256=db6cdfadac8d3d1f85c55c3644620cf5a0f65bf01ca26a58ff06f041bf159a5d
-zsh_doc_sha256=3ed1f41f9746cda82ecf187379cf2faf530ce2e637595698fe2e504589da9667
+zsh_doc_sha256=8bc7e531dd88b1cd2e2e879840d0e73866ff90ade84c556a420231eda380208a
 
 cpus="$(getconf _NPROCESSORS_ONLN)" || cpus="$(sysctl -n hw.ncpu)" || cpus=8
 
