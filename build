@@ -240,11 +240,12 @@ name=zsh-5.8-"$ZSH_BIN_KERNEL"-"$ZSH_BIN_ARCH"
 
 export CPPFLAGS=
 export LDFLAGS=
+export EXELDFLAGS=
 export LIBS=
 
 case "$ZSH_BIN_KERNEL" in
   linux|freebsd|msys*|mingw*)
-    LDFLAGS="-static"
+    EXELDFLAGS="-static"
     LIBS="-lpcre"
   ;;
   darwin)
@@ -258,7 +259,7 @@ case "$ZSH_BIN_KERNEL" in
     LIBS="-lpcre"
   ;;
   cygwin*)
-    LDFLAGS="-static"
+    EXELDFLAGS="-static"
   ;;
   *)
     >&2 echo "[internal error] unhandled kernel: $ZSH_BIN_KERNEL"
@@ -267,6 +268,7 @@ case "$ZSH_BIN_KERNEL" in
 esac
 
 export CFLAGS="$CPPFLAGS -march=$ZSH_BIN_CPU"
+export DLLDFLAGS=-shared
 
 ./Util/preconfig
 ./configure                          \
@@ -832,7 +834,6 @@ case "$ZSH_BIN_KERNEL" in
       -e ZSH_BIN_CPU="$ZSH_BIN_CPU"       \
       -v "$PWD":/out                      \
       -w /out                             \
-      --tty                               \
       --rm                                \
       -- "$ZSH_BIN_IMAGE" /bin/sh -uexc "$build"
   ;;
