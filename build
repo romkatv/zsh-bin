@@ -64,6 +64,7 @@ fi
 cleanup() {
   cd /
   rm -rf -- "$workdir"
+  trap - INT QUIT TERM EXIT ILL PIPE
 }
 trap cleanup INT QUIT TERM EXIT ILL PIPE
 
@@ -865,11 +866,12 @@ esac
 
 case "$ZSH_BIN_KERNEL" in
   linux)
+    dir="$(pwd)"
     "$docker" run                         \
       -e ZSH_BIN_KERNEL="$ZSH_BIN_KERNEL" \
       -e ZSH_BIN_ARCH="$ZSH_BIN_ARCH"     \
       -e ZSH_BIN_CPU="$ZSH_BIN_CPU"       \
-      -v "$PWD":/out                      \
+      -v "$dir":/out                      \
       -w /out                             \
       --rm                                \
       -- "$image" /bin/sh -uexc "$build"
