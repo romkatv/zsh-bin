@@ -186,7 +186,7 @@ Or you can download a 3MB archive from zsh-bin, extract it, and enjoy Zsh 5.8.
 I `ssh` to servers through a Bash wrapper script that automatically copies my admin tools and shell
 configs from the local machine to remote. Here's the gist of it:
 
-```zsh
+```bash
 #!/usr/bin/env bash
 #
 # Usage: ssh.bash [ssh-options] [user@]hostname
@@ -214,9 +214,32 @@ This worked in some cases but not always as the version of Zsh from xxh turned o
 enough for my needs. I set out to build a more portable alternative and created zsh-bin. Since it
 works for me, I figured it might be of use to others.
 
-My public standalone `ssh.zsh` script is [here](
-  https://github.com/romkatv/dotfiles-public/blob/master/bin/ssh.zsh). See comments at the top if
-you are curious.
+Here's how you can run Zsh over SSH with automatic installation from zsh-bin if there is no Zsh
+on the machine:
+
+```zsh
+#!/usr/bin/env zsh
+#
+# Usage: ssh.zsh [ssh-options] [user@]hostname
+
+ssh -t "$@" '
+  set -eu
+  if ! command -v zsh >/dev/null 2>&1; then
+    if [ ! -d ~/.zsh-bin ]; then
+      if command -v curl >/dev/null 2>&1; then
+        curl -fsSL https://raw.githubusercontent.com/romkatv/zsh-bin/master/install | sh
+      else
+        wget -O- https://raw.githubusercontent.com/romkatv/zsh-bin/master/install | sh
+      fi
+    fi
+    export PATH="$PATH:$HOME/.zsh-bin/bin"
+  fi
+  exec zsh -il
+'
+```
+
+You can transfer files from the local machine to the remote similarly to how it's done in the
+previous Bash script.
 
 ## Limitations
 
