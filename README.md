@@ -186,7 +186,7 @@ Or you can download a 3MB archive from zsh-bin, extract it, and enjoy Zsh 5.8.
 I `ssh` to servers through a Bash wrapper script that automatically copies my admin tools and shell
 configs from the local machine to remote. Here's the gist of it:
 
-```zsh
+```bash
 #!/usr/bin/env bash
 #
 # Usage: ssh.bash [ssh-options] [user@]hostname
