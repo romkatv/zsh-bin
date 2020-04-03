@@ -214,9 +214,8 @@ This worked in some cases but not always as the version of Zsh from xxh turned o
 enough for my needs. I set out to build a more portable alternative and created zsh-bin. Since it
 works for me, I figured it might be of use to others.
 
-My public standalone `ssh.zsh` script is [here](
-  https://github.com/romkatv/dotfiles-public/blob/master/bin/ssh.zsh). See comments at the top if
-you are curious.
+Users of [zsh4humans](https://github.com/romkatv/zsh4humans) can run `zssh` instead of plain `ssh`
+to fire up Zsh on the remote server with local Zsh configs.
 
 ## Limitations
 
