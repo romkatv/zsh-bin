@@ -47,15 +47,15 @@ file:zsh-5.8-linux-x86_64.tar.gz;          md5:093a5caa31db9a383c7b5bfd3a3ed353;
 file:zsh-5.8-msys_nt-10.0-i686.tar.gz;     md5:16f6b3aefbcdada9edd4711402948302; sha256:e1a5b72dedfe5ad749b96b59ec6a52c32540a37d9183de11c84e747ce10911ab;
 file:zsh-5.8-msys_nt-10.0-x86_64.tar.gz;   md5:635716bc7be6560a567a7836319ca629; sha256:d9df06aeada673489001c45b39186056730f2321f0087598d3d27b5e000dcc14;'
 
-usage="$(cat <<\END
-Usage: install [-d DIR] [-q] [[-a ALGO]...]|[-f FILE]|[-u URL]
+usage="$(cat <<END
+Usage: $0 [-d DIR] [-q] [[-a ALGO]...]|[-f FILE]|[-u URL]
 
 Download statically-linked, hermetic, relocatable Zsh 5.8 from
 https://github.com/romkatv/zsh-bin/releases and install it to DIR.
 
 Options:
 
-  -d DIR  Install to this directory. Defaults to ~/.zsh-bin.
+  -d DIR  Install to this directory. Defaults to '~/.local'.
 
   -q      Produce no output on success.
 
@@ -74,7 +74,10 @@ END
 )"
 
 absfile() {
-  [ -e "$1" ]
+  if [ ! -e "$1" ]; then
+    >&2 echo "[error] file not found: $1"
+    return 1
+  fi
   local dir base
   dir="$(dirname -- "$1")"
   base="$(basename -- "$1")"
@@ -135,10 +138,7 @@ while getopts ':hqd:a:f:u:' opt "$@"; do
         >&2 echo "[error] incorrect value of -$opt: $OPTARG"
         exit 1
       fi
-      if ! file="$(absfile "$OPTARG")"; then
-        >&2 echo "[error] file not found: $OPTARG"
-        exit 1
-      fi
+      file="$(absfile "$OPTARG")"
     ;;
     u)
       if [ -n "$url" ]; then
@@ -173,18 +173,8 @@ if [ -n "$algos" ]; then
   fi
 fi
 
-if [ -n "$dir" ]; then
-  if [ -n "${dir##/*}" ]; then
-    >&2 echo "[error] path not absolute: $dir"
-    exit 1
-  fi
-else
-  home="${HOME:-x}"
-  if [ "$home" = x -o -n "${home##/*}" ]; then
-    >&2 echo "[error] invalid HOME: $home"
-    exit 1
-  fi
-  dir="$home"/.zsh-bin
+if [ -z "$dir" ]; then
+  dir=~/.local
 fi
 
 if [ -e "$dir" ]; then
@@ -192,23 +182,26 @@ if [ -e "$dir" ]; then
     >&2 echo "[error] not a directory: $dir"
     exit 1
   fi
-  files="$(ls -A -- "$dir")"
-  if [ -n "$files" ]; then
-    >&2 echo "[error] directory exists and not empty: $dir"
-    exit 1
+  if [ ! -w "$dir" ]; then
+    >&2 echo "[error] not writable: $dir"
+    >&2 echo "Try: sudo $0" "$@"
   fi
+elif ! mkdir -p -- "$dir"; then
+  euid="$(id -u 2>/dev/null)"
+  if [ "$euid" != 0 ]; then
+    while [ "$dir" != / -a "$dir" != // -a "$dir" != . ]; do
+      dir="$(dirname -- "$dir")"
+      if [ -d "$dir" -a ! -w "$dir" ]; then
+        >&2 echo "Try: sudo $0" "$@"
+        break
+      fi
+    done
+  fi
+  exit 1
 fi
 
-tmpdir="$dir".tmp.$$
-cleanup() {
-  cd /
-  rm -rf -- "$tmpdir"
-}
-trap cleanup INT QUIT TERM EXIT ILL PIPE
-
-rm -rf -- "$tmpdir"
-mkdir -- "$tmpdir"
-cd -- "$tmpdir"
+cd -- "$dir"
+dir="$(pwd)"
 
 if [ -z "$file" -a -z "$url" ]; then
   kernel="$(uname -s | tr '[A-Z]' '[a-z]')"
@@ -240,20 +233,27 @@ else
 fi
 
 if [ -n "$url" ]; then
+  file="$dir"/zsh.tmp.$$.tar.gz
+  cleanup() { rm -f -- "$file"; }
+  trap cleanup INT QUIT TERM EXIT ILL PIPE
+
   if [ -z "$quiet" ]; then
     echo "Downloading $url"
   fi
 
   if command -v curl >/dev/null 2>&1; then
-    curl -fsSLO -- "$url"
+    curl -fsSLo "$file" -- "$url"
   elif command -v wget >/dev/null 2>&1; then
-    wget ${quiet:+--quiet} -- "$url"
+    if ! err="$(wget -O "$file" -- "$url" 2>&1)"; then
+      >&2 printf "%s" "$err"
+      exit 1
+    fi
   else
     >&2 echo "[error] please install curl or wget and retry"
     exit 1
   fi
-
-  file="$tmpdir/${url##*/}"
+else
+  cleanup() { }
 fi
 
 if [ "$check_sig" = 1 ]; then
@@ -301,7 +301,7 @@ if [ "$check_sig" = 1 ]; then
         >&2 echo ""
         >&2 echo "Expected:"
         >&2 echo ""
-        >&2 echo "  $(printf "%s" "$archives" | grep -F "${file##*/}" | sed 's/  */ /g')"
+        >&2 echo "  $(printf "%s" "$archives" | grep -F "${url##*/}" | sed 's/  */ /g')"
         >&2 echo ""
         >&2 echo "Found:"
         >&2 echo ""
@@ -330,16 +330,7 @@ if [ -z "$quiet" ]; then
 fi
 
 tar -xzf "$file"
-base="$(basename -- "${file%.tar.gz}")"
-"$base"/share/zsh/5.8/scripts/relocate -d "$dir"
-
-if [ -z "$quiet" ]; then
-  echo "Moving files to $dir"
-fi
-
-mkdir -p -- "$dir"
-rmdir -- "$dir"
-mv -- "$tmpdir"/"$base" "$dir"
+./share/zsh/5.8/scripts/relocate
 
 cleanup
 
@@ -349,9 +340,11 @@ if [ -z "$quiet" ]; then
   echo ""
   echo "To start zsh, type:"
   echo ""
-  echo "  $dir/bin/zsh"
-  echo ""
-  echo "Consider adding $dir/bin to PATH for convenience."
+  p=":$PATH:"
+  if [ -n "${p##:$dir/bin:}" ]; then
+    echo 'export PATH="$dir:$PATH"'
+  fi
+  echo "  zsh"
 fi
 
 }
