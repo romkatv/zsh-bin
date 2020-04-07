@@ -184,7 +184,7 @@ Or you can download a 3MB archive from zsh-bin, extract it, and enjoy Zsh 5.8.
 ## No, seriously, why?
 
 I `ssh` to servers through a Bash wrapper script that automatically copies my admin tools and shell
-configs from the local machine to remote. Here's the gist of it:
+configs from local host to remote. Here's the gist of it:
 
 ```bash
 #!/usr/bin/env bash
@@ -207,15 +207,15 @@ In March of 2020 an [announcement](
   https://www.reddit.com/r/zsh/comments/fiq9w2/bring_zsh_with_ohmyzsh_wherever_you_go_through/) was
 posted on [/r/zsh](https://www.reddit.com/r/zsh/). It mentioned that "xxh uses the portable
 version of Zsh". I thought it would be cool to migrate my `ssh.bash` script to Zsh and install
-the portable version of Zsh on the remote machine if there isn't one already installed (this is
+the portable version of Zsh on the remote host if there isn't one already installed (this is
 basically what [xxh](https://github.com/xxh/xxh) does).
 
 This worked in some cases but not always as the version of Zsh from xxh turned out not portable
 enough for my needs. I set out to build a more portable alternative and created zsh-bin. Since it
 works for me, I figured it might be of use to others.
 
-Users of [zsh4humans](https://github.com/romkatv/zsh4humans) can run `zssh` instead of plain `ssh`
-to fire up Zsh on the remote server with local Zsh configs.
+Users of [zsh4humans](https://github.com/romkatv/zsh4humans) can run `z4h ssh` instead of plain
+`ssh` to fire up Zsh on the remote host with local Zsh configs.
 
 ## Limitations
 
