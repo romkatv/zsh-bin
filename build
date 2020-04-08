@@ -82,7 +82,7 @@ libiconv_sha256=e6a1b1b589654277ee790cce3734f07876ac4ccfaecbee8afa0b649cf529cc04
 icmake_sha256=7c5c091f58f576da580238c5e3636e2038d9ecf5efb6562ae7e402910d9036e6
 yodl_sha256=0118efd6f05ddeed4910bb5e280a37a4d8e5c2f42fb2009c840b3d5c70f700f8
 zsh_sha256=db6cdfadac8d3d1f85c55c3644620cf5a0f65bf01ca26a58ff06f041bf159a5d
-zsh_doc_sha256=8bc7e531dd88b1cd2e2e879840d0e73866ff90ade84c556a420231eda380208a
+zsh_doc_sha256=925ffdcbdca84ae350c3140e39469c6000459d0aa75cd4df17e6ad4dd9324e94
 
 cpus="$(getconf _NPROCESSORS_ONLN)" || cpus="$(sysctl -n hw.ncpu)" || cpus=8
 
@@ -124,6 +124,7 @@ case "$ZSH_BIN_KERNEL" in
       ncurses-static \
       pcre-dev       \
       perl-utils     \
+      rsync          \
       tar            \
       util-linux
 
@@ -149,6 +150,7 @@ case "$ZSH_BIN_KERNEL" in
       ncurses      \
       perl5        \
       pcre         \
+      rsync        \
       yodl
   ;;
   darwin)
@@ -176,6 +178,7 @@ case "$ZSH_BIN_KERNEL" in
       ncurses-devel                 \
       perl                          \
       pcre-devel                    \
+      rsync                \
       yodl
   ;;
   cygwin*)
@@ -196,6 +199,7 @@ case "$ZSH_BIN_KERNEL" in
         >&2 echo "  make"
         >&2 echo "  perl"
         >&2 echo "  tar"
+        >&2 echo "  rsync"
         >&2 echo "  util-linux"
         >&2 echo "  wget"
         exit 1
@@ -405,15 +409,19 @@ else
   make -j "$cpus" install
 fi
 
+rsync -a --copy-links --copy-dirlinks -- "$workdir/$name"/ "$workdir/$name".tmp/
+rm -r -- "$workdir/$name"
+mv -- "$workdir/$name".tmp "$workdir/$name"
+
 cd -- "$workdir/$name"
 
 strip bin/zsh
 rm -- bin/zsh-5.8
 
 if [ -d /usr/share/terminfo ]; then
-  cp -r -- /usr/share/terminfo share/
+  rsync -a --copy-links --copy-dirlinks -- /usr/share/terminfo share/
 else
-  cp -- /usr/local/share/misc/terminfo.db share/
+  cp -L -- /usr/local/share/misc/terminfo.db share/
 fi
 
 if [ -e "$workdir"/zsh_doc ]; then
@@ -645,20 +653,7 @@ share/zsh/5.8/scripts/relocate
 bin/zsh -fec 'zmodload zsh/stat; autoload -Uz add-zsh-hook; add-zsh-hook precmd x'
 share/zsh/5.8/scripts/relocate -d /usr/local
 
-case "$ZSH_BIN_KERNEL" in
-  linux)
-    deref=--hard-dereference
-  ;;
-  freebsd|darwin|msys*|mingw*|cygwin*)
-    deref=
-  ;;
-  *)
-    >&2 echo "[internal error] unhandled kernel: $ZSH_BIN_KERNEL"
-    exit 1
-  ;;
-esac
-
-tar $deref -pczf "$outdir"/tmp."$name".tar.gz *
+tar -pczf "$outdir"/tmp."$name".tar.gz *
 mv -f -- "$outdir"/tmp."$name".tar.gz "$outdir"/"$name".tar.gz
 
 cleanup
