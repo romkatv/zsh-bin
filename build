@@ -91,7 +91,6 @@ fetch() {
   local sha256="$2"
   local archive="${url##*/}"
   local base="${archive%.tar.gz}"
-  cd -- "$workdir"
   printf '%s  %s\n' "$sha256" "$archive" >"$base".sha256
   if ! cp -- "$outdir/src/$archive" . 2>/dev/null || ! shasum -b -a 256 -c "$base".sha256; then
     rm -f -- "$archive"
@@ -128,6 +127,7 @@ case "$ZSH_BIN_KERNEL" in
       tar            \
       util-linux
 
+      cd -- "$workdir"
       fetch "$libiconv_url" "$libiconv_sha256"
       cd libiconv-"$libiconv_version"
       ./configure                     \
@@ -163,8 +163,9 @@ case "$ZSH_BIN_KERNEL" in
       exit 1
     fi
     brew install autoconf libiconv ncurses pcre wget
+    mkdir -- "$workdir"/zsh_doc
+    cd -- "$workdir"/zsh_doc
     fetch "$zsh_doc_url" "$zsh_doc_sha256"
-    mv -- "$workdir"/zsh-5.8-linux-x86_64 "$workdir"/zsh_doc
   ;;
   msys*|mingw*)
     pacman -Sy --needed --noconfirm \
@@ -220,6 +221,7 @@ esac
 
 if [ ! -e "$workdir"/zsh_doc ] && ! command -v yodl >/dev/null 2>&1; then
   if ! command -v icmake >/dev/null 2>&1; then
+    cd -- "$workdir"
     fetch "$icmake_url" "$icmake_sha256"
     cd icmake-"$icmake_version"/icmake
     ./icm_prepare /
@@ -227,6 +229,7 @@ if [ ! -e "$workdir"/zsh_doc ] && ! command -v yodl >/dev/null 2>&1; then
     ./icm_install all
   fi
 
+  cd -- "$workdir"
   fetch "$yodl_url" "$yodl_sha256"
   cd yodl-"$yodl_version"
   mkdir fake-bin
@@ -240,6 +243,7 @@ if [ ! -e "$workdir"/zsh_doc ] && ! command -v yodl >/dev/null 2>&1; then
   PATH="$fake_bin_dir:$PATH" ./build install macros
 fi
 
+cd -- "$workdir"
 fetch "$zsh_url" "$zsh_sha256"
 cd zsh-zsh-5.8
 
