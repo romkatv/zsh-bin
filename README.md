@@ -42,20 +42,12 @@ Choose installation directory for Zsh 5.8:
   (2) /home/romka/.local
   (3) Custom directory (input required)
 
-Choice: 2
+Choice: 1
 
-Installing Zsh 5.8 to /home/romka/.local
-Downloading https://github.com/romkatv/zsh-bin/releases/download/v4.0.0/zsh-5.8-linux-x86_64.tar.gz
-Verifying archive integrity
-  - sha256 signature matches
-  - md5 signature matches
-Extracting files
-
-Zsh 5.8 successfully installed to /home/romka/.local
+Zsh 5.8 successfully installed to /usr/local
 
 To start zsh, type:
 
-  export PATH="/home/romka/.local/bin:$PATH"
   zsh
 ```
 
