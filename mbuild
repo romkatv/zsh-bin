@@ -41,9 +41,7 @@
 # - Install 64-bit and 32-bit cygwin: https://cygwin.com/install.html.
 #   - Choose to install 32-bit to c:/cygwin32 instead of the default c:/cygwin.
 #   - Select these packages: autoconf, binutils, gcc-core, gcc-g++, git, groff,
-#     libiconv-devel, libncurses-devel, make, perl, tar, util-linux, wget.
-# - If you haven't disabled Windows Defender, add cygwin and msys directories
-#   to the list of exceptions (optional).
+#     libiconv-devel, libncurses-devel, make, perl, rsync, tar, util-linux, wget.
 #
 # Option 1: OpenSSH for Windows
 #
@@ -181,7 +179,6 @@ function build-unix() {
 }
 
 function build-windows() {
-  setopt xtrace
   local shell=$(ssh $1 'echo $0')
   if [[ $shell == '$0'* ]]; then
     local c='c:'
@@ -213,9 +210,11 @@ function build-windows() {
     $build ${2##*-}
     exit"
   scp $1:$c/tmp/zsh-bin/zsh-5.8-$2.tar.gz $archives/
+  chmod -x -- $archives/zsh-5.8-$2.tar.gz
 }
 
 function build() (
+  setopt xtrace
   local platform=$1
   local machine=$assets[$platform]
   print -n >>$locks/$machine
@@ -320,4 +319,4 @@ mkdir -p -- $logs $locks $archives
 rm -f -- $archives/zsh-5.8-${^@}.tar.gz
 run-process-tree mbuild $@
 print -r -- "---------------------"
-list $archives/zsh-5.8-${^@}.tar.gz
+list $archives/zsh-5.8-*.tar.gz
