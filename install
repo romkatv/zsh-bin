@@ -200,9 +200,9 @@ else
   while true; do
     echo "Choose installation directory for Zsh 5.8:"
     echo ""
-    printf "%s" "$dirs" | sed -E 's/^  \([0-9]*\) $/\0Custom directory (input required)/'
+    printf "%s" "$dirs" | sed -E 's/^(  \([0-9]*\) )$/\1Custom directory (input required)/'
     echo ""
-    echo -n "Choice: "
+    printf "Choice: "
     read -r choice
     if printf "%s" "$dirs" | cut -b 4 | grep -qxF -- "$choice"; then
       break
@@ -214,7 +214,7 @@ fi
 
 dir="$(printf "%s" "$dirs" | sed "${choice}!d" | cut -b 7-)"
 if [ -z "$dir" ]; then
-  echo -n "Custom directory: "
+  printf "Custom directory: "
   read -r dir
   check_dir "$dir"
 fi
