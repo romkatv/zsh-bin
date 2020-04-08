@@ -165,17 +165,17 @@ case "$ZSH_BIN_KERNEL" in
     mv -- "$workdir"/zsh-5.8-linux-x86_64 "$workdir"/zsh_doc
   ;;
   msys*|mingw*)
-    pacman -Sy --noconfirm \
-      autoconf             \
-      binutils             \
-      gcc                  \
-      groff                \
-      libiconv-devel       \
-      make                 \
-      man                  \
-      ncurses-devel        \
-      perl                 \
-      pcre-devel           \
+    pacman -Sy --needed --noconfirm \
+      autoconf                      \
+      binutils                      \
+      gcc                           \
+      groff                         \
+      libiconv-devel                \
+      make                          \
+      man                           \
+      ncurses-devel                 \
+      perl                          \
+      pcre-devel                    \
       yodl
   ;;
   cygwin*)
