@@ -42,6 +42,11 @@
 #   - Choose to install 32-bit to c:/cygwin32 instead of the default c:/cygwin.
 #   - Select these packages: autoconf, binutils, gcc-core, gcc-g++, git, groff,
 #     libiconv-devel, libncurses-devel, make, perl, tar, util-linux, wget.
+# - If you haven't disabled Windows Defender, add cygwin and msys directories
+#   to the list of exceptions (optional).
+#
+# Option 1: OpenSSH for Windows
+#
 # - Install OpenSSH: https://docs.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse.
 #   ps> Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
 #   ps> Start-Service sshd
@@ -57,6 +62,25 @@
 #       # Match Group administrators
 #       #   AuthorizedKeysFile __PROGRAMDATA__/ssh/administrators_authorized_keys
 #   ps> Restart-Service sshd
+#
+# Option 2: OpenSSH from WSL
+#
+# - Install WSL.
+# - Install Ubuntu.
+# - Install sshd.
+#   $ sudo apt install openssh-server
+#   $ sudo dpkg-reconfigure openssh-server
+#   $ sudo tee /etc/ssh/sshd_config <<\END
+#     ClientAliveInterval 60
+#     AcceptEnv TERM LANG LC_*
+#     PermitRootLogin no
+#     AllowTcpForwarding no
+#     AllowAgentForwarding no
+#     AllowStreamLocalForwarding no
+#     AuthenticationMethods publickey
+#   END
+#   sudo service ssh --full-restart
+# - Add your public ssh key to ~/.ssh/authorized_keys.
 
 'emulate' '-L' 'zsh' '-o' 'no_aliases' '-o' 'err_return'
 setopt no_unset extended_glob pipe_fail prompt_percent typeset_silent \
@@ -120,7 +144,7 @@ done
 
 shift $((OPTIND - 1))
 
-(( $# )) || set -- ${(k)assets}
+(( $# )) || set -- ${(ko)assets}
 set -- ${(u)@}
 
 local platform
@@ -157,28 +181,38 @@ function build-unix() {
 }
 
 function build-windows() {
+  setopt xtrace
+  local shell=$(ssh $1 'echo $0')
+  if [[ $shell == '$0'* ]]; then
+    local c='c:'
+  else
+    local c='/mnt/c'
+  fi
+
   local tmp env bin intro
   case $2 in
     msys_nt-10.0-*)
       tmp='/c/tmp'
       env='MSYSTEM=MSYS'
-      intro='pacman -Sy --needed --noconfirm git'
+      intro='pacman -Sy --needed --noconfirm git; '
+      intro+='PATH="$PATH:/usr/bin/site_perl:/usr/bin/vendor_perl:/usr/bin/core_perl"'
     ;|
     cygwin_nt-10.0-*)
       tmp='/cygdrive/c/tmp'
     ;|
-    msys_nt-10.0-i686)     bin='c:/msys32/usr/bin';;
-    msys_nt-10.0-x86_64)   bin='c:/msys64/usr/bin';;
-    cygwin_nt-10.0-i686)   bin='c:/cygwin32/bin'  ;;
-    cygwin_nt-10.0-x86_64) bin='c:/cygwin64/bin'  ;;
+    msys_nt-10.0-i686)     bin='msys32/usr/bin';;
+    msys_nt-10.0-x86_64)   bin='msys64/usr/bin';;
+    cygwin_nt-10.0-i686)   bin='cygwin32/bin'  ;;
+    cygwin_nt-10.0-x86_64) bin='cygwin64/bin'  ;;
   esac
-  ssh $1 $bin/env.exe $env $bin/bash.exe -l <<<"
+  ssh $1 $c/$bin/env.exe $env c:/$bin/bash.exe -l <<<"
     set -uex
     $intro
     mkdir -p -- $tmp
     cd -- $tmp
-    $build ${2##*-}"
-  scp $1:c:/tmp/zsh-bin/zsh-5.8-$2.tar.gz $archives/
+    $build ${2##*-}
+    exit"
+  scp $1:$c/tmp/zsh-bin/zsh-5.8-$2.tar.gz $archives/
 }
 
 function build() (
