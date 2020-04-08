@@ -76,7 +76,7 @@ libiconv_url=https://ftp.gnu.org/pub/gnu/libiconv/libiconv-$libiconv_version.tar
 icmake_url=https://gitlab.com/fbb-git/icmake/-/archive/$icmake_version/icmake-$icmake_version.tar.gz
 yodl_url=https://gitlab.com/fbb-git/yodl/-/archive/$yodl_version/yodl-$yodl_version.tar.gz
 zsh_url=https://github.com/zsh-users/zsh/archive/zsh-5.8.tar.gz
-zsh_doc_url=https://github.com/romkatv/zsh-bin/releases/download/v3.0.1/zsh-5.8-linux-x86_64.tar.gz
+zsh_doc_url=https://github.com/romkatv/zsh-bin/releases/download/v4.0.0/zsh-5.8-linux-x86_64.tar.gz
 
 libiconv_sha256=e6a1b1b589654277ee790cce3734f07876ac4ccfaecbee8afa0b649cf529cc04
 icmake_sha256=7c5c091f58f576da580238c5e3636e2038d9ecf5efb6562ae7e402910d9036e6

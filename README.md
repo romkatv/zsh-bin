@@ -2,6 +2,14 @@
 
 > Statically-linked, hermetic, relocatable Zsh.
 
+- The latest version of Zsh.
+- Works virtually everywhere.
+- Takes seconds to install.
+- Doesn't require root access.
+- Does not have prerequisites.
+
+## Table of Contents
+
 - [Installation](#installation)
 - [Compiling](#compiling)
 - [How it works](#how-it-works)
@@ -184,7 +192,7 @@ necessary build tools, you can compile Zsh there and copy build artifacts to the
 machine. If you place all files in the same location and set a few custom environment variables, it
 should work.
 
-Or you can download a 3MB archive from zsh-bin, extract it, and enjoy Zsh 5.8.
+Or you can download a 4MB archive from zsh-bin, extract it, and enjoy Zsh 5.8.
 
 ## No, seriously, why?
 
