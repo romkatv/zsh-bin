@@ -392,7 +392,7 @@ if [ -z "$quiet" ]; then
   echo ""
   echo "Zsh 5.8 successfully installed to $dir"
   echo ""
-  echo "To start zsh, type:"
+  echo "To start Zsh, type:"
   echo ""
   if ! zsh="$(command -v zsh 2>/dev/null)" || [ "$zsh" != "$dir/bin/zsh" ]; then
     echo '  export PATH="'$dir'/bin:$PATH"'

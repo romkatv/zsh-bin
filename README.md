@@ -46,7 +46,7 @@ Choice: 1
 
 Zsh 5.8 successfully installed to /usr/local
 
-To start zsh, type:
+To start Zsh, type:
 
   zsh
 ```
