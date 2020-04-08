@@ -405,27 +405,31 @@ else
   make -j "$cpus" install
 fi
 
-strip "$workdir/$name"/bin/zsh
-rm -- "$workdir/$name"/bin/zsh-5.8
+cd -- "$workdir/$name"
+
+strip bin/zsh
+rm -- bin/zsh-5.8
 
 if [ -d /usr/share/terminfo ]; then
-  cp -r -- /usr/share/terminfo "$workdir/$name"/share/
+  cp -r -- /usr/share/terminfo share/
 else
-  cp -- /usr/local/share/misc/terminfo.db "$workdir/$name"/share/
+  cp -- /usr/local/share/misc/terminfo.db share/
 fi
 
 if [ -e "$workdir"/zsh_doc ]; then
-  cp -r -- "$workdir"/zsh_doc/share/man "$workdir/$name"/share/
-  cp -r -- "$workdir"/zsh_doc/share/zsh/5.8/help "$workdir/$name"/share/zsh/5.8/
+  cp -r -- "$workdir"/zsh_doc/share/man share/
+  cp -r -- "$workdir"/zsh_doc/share/zsh/5.8/help share/zsh/5.8/
 fi
+
+cp -r -- share/man ./
 
 sed_i 's/local HELPDIR=.*/[[ -n "${HELPDIR:-}" ]] || local HELPDIR="$(<<\\'"$magic"'\
 '"$magic"'\
-)"/'                                                 \
-  "$workdir/$name"/share/zsh/5.8/functions/run-help  \
-  "$workdir/$name"/share/zsh/5.8/functions/_run-help
+)"/'                                \
+  share/zsh/5.8/functions/run-help  \
+  share/zsh/5.8/functions/_run-help
 
-cat >"$workdir/$name"/share/zsh/5.8/scripts/relocate <<-\END
+cat >share/zsh/5.8/scripts/relocate <<-\END
 	#!/bin/sh
 
 	set -ue
@@ -615,7 +619,7 @@ cat >"$workdir/$name"/share/zsh/5.8/scripts/relocate <<-\END
 	mv -f -- "$runhelpcomp".tmp "$runhelpcomp"
 	END
 
-sed_i "s/@ZSH_BIN_MAGIC@/$magic/g" "$workdir/$name"/share/zsh/5.8/scripts/relocate
+sed_i "s/@ZSH_BIN_MAGIC@/$magic/g" share/zsh/5.8/scripts/relocate
 
 embed_pos() {
   local cmd='
@@ -624,22 +628,22 @@ embed_pos() {
     (( $#parts == 2 ))
     print -r -- $#parts[1]'
   local pos
-  pos="$("$workdir/$name"/bin/zsh -fuec "$cmd" "$workdir/$name"/bin/zsh ":$magic:$1:")"
+  pos="$(bin/zsh -fuec "$cmd" bin/zsh ":$magic:$1:")"
   printf '%s' "$pos" | grep -qxE '[0-9]+'
   local upper
   upper="$(printf '%s' "$1" | tr '[a-z]' '[A-Z]')"
-  sed_i "s/@ZSH_BIN_${upper}_POS@/$pos/g" "$workdir/$name"/share/zsh/5.8/scripts/relocate
+  sed_i "s/@ZSH_BIN_${upper}_POS@/$pos/g" share/zsh/5.8/scripts/relocate
 }
 
 embed_pos fpath
 embed_pos script
 embed_pos terminfo
 
-chmod +x "$workdir/$name"/share/zsh/5.8/scripts/relocate
+chmod +x share/zsh/5.8/scripts/relocate
 
-"$workdir/$name"/share/zsh/5.8/scripts/relocate
-"$workdir/$name"/bin/zsh -fec 'zmodload zsh/stat; autoload -Uz add-zsh-hook; add-zsh-hook precmd x'
-"$workdir/$name"/share/zsh/5.8/scripts/relocate -d /usr
+share/zsh/5.8/scripts/relocate
+bin/zsh -fec 'zmodload zsh/stat; autoload -Uz add-zsh-hook; add-zsh-hook precmd x'
+share/zsh/5.8/scripts/relocate -d /usr/local
 
 case "$ZSH_BIN_KERNEL" in
   linux)
@@ -654,7 +658,7 @@ case "$ZSH_BIN_KERNEL" in
   ;;
 esac
 
-tar -C "$workdir" $deref -pczf "$outdir"/tmp."$name".tar.gz "$name"
+tar $deref -pczf "$outdir"/tmp."$name".tar.gz *
 mv -f -- "$outdir"/tmp."$name".tar.gz "$outdir"/"$name".tar.gz
 
 cleanup
@@ -669,34 +673,15 @@ cat >&2 <<-END
 	As long as the target machine has a compatible CPU and
 	kernel, it will work.
 
-	To install Zsh from the archive to ~/.zsh-bin, copy it to
-	the home directory on the target machine and run:
+	To install Zsh from the archive, copy it along with
+	'install' script to the home directory on the target
+	machine and run:
 
-	  cd
-	  rm -rf ~/.zsh-bin ~/$name
-	  tar -xzf ~/$name.tar.gz
-	  mv $name ~/.zsh-bin
-	  ~/.zsh-bin/share/zsh/5.8/scripts/relocate
-	  rm ~/$name.tar.gz
+	  sh ~/install -f ~/$name.tar.gz
 
-	Now you can invoke ~/.zsh-bin/bin/zsh and it will just work.
-	You will probably want to add ~/.zsh-bin/bin to PATH for
-	convenience.
-
-	If you move or rename ~/.zsh-bin, you will need to call
-	share/zsh/5.8/scripts/relocate/relocate afterwards. See the
-	last line in the instructions above.
 	END
 END
 )"
-
-absfile() {
-  [ -e "$1" ]
-  local dir base
-  dir="$(dirname -- "$1")"
-  base="$(basename -- "$1")"
-  ( cd -- "$dir" && dir="$(pwd)" && printf '%s/%s\n' "${dir%/}" "${base}" )
-}
 
 image=
 docker=

@@ -24,32 +24,37 @@ Or, if you don't have `curl`:
 sh -c "$(wget -O- https://raw.githubusercontent.com/romkatv/zsh-bin/master/install)"
 ```
 
-Or, if you prefer, follow [manual installation](#manual-installation) instructions.
+Here's what it looks like:
 
-Add `~/.zsh-bin/bin` to `PATH` and type `zsh` to start Zsh.
+```text
+$ sh -c "$(curl -fsSL https://raw.githubusercontent.com/romkatv/zsh-bin/master/install)"
+Choose installation directory for Zsh 5.8:
 
-*Tip*: `install` has a few optional flags. Invoke it with `-h` to list them.
+  (1) /usr/local
+  (2) /home/romka/.local
+  (3) Custom directory (input required)
 
-### Manual installation
+Choice: 2
 
-```sh
-kernel=$(uname -s | tr '[A-Z]' '[a-z]')
-arch=$(uname -m | tr '[A-Z]' '[a-z]')
-name="zsh-5.8-${kernel}-${arch}"
-curl -fsSLO -- "https://github.com/romkatv/zsh-bin/releases/download/v3.0.1/${name}.tar.gz"
-tar -xzf "$name".tar.gz
-rm "$name".tar.gz
-rm -rf ~/.zsh-bin
-mv "$name" ~/.zsh-bin
-~/.zsh-bin/share/zsh/5.8/scripts/relocate
+Installing Zsh 5.8 to /home/romka/.local
+Downloading https://github.com/romkatv/zsh-bin/releases/download/v4.0.0/zsh-5.8-linux-x86_64.tar.gz
+Verifying archive integrity
+  - sha256 signature matches
+  - md5 signature matches
+Extracting files
+
+Zsh 5.8 successfully installed to /home/romka/.local
+
+To start zsh, type:
+
+  export PATH="/home/romka/.local/bin:$PATH"
+  zsh
 ```
 
-The [install script](https://github.com/romkatv/zsh-bin/blob/master/install) has more robust logic
-for determining which archive to download. See its source code if the simple algorithm listed
-above gives you HTTP 404.
+*Tip*: choose to install to `/usr/local` if you have root access on the machine and to `~/.local`
+if you don't.
 
-If you move or rename `~/.zsh-bin`, you'll need to call `share/zsh/5.8/scripts/relocate/relocate`
-afterwards. See the last line in the instructions above.
+*Tip*: `install` has a few optional flags. Invoke it with `-h` to list them.
 
 ## Compiling
 
