@@ -756,6 +756,7 @@ fi
 
 if [ -z "$ZSH_BIN_CPU" ]; then
   case "$ZSH_BIN_ARCH" in
+    armv6l)         ZSH_BIN_CPU=armv6;;
     armv7l)         ZSH_BIN_CPU=armv7;;
     aarch64)        ZSH_BIN_CPU=armv8-a;;
     x86_64|amd64)   ZSH_BIN_CPU=x86-64;;
@@ -777,6 +778,7 @@ case "$ZSH_BIN_KERNEL" in
       case "$ZSH_BIN_ARCH" in
         x86_64)         image=alpine:3.9.5;;
         i386|i586|i686) image=i386/alpine:3.9.5;;
+        armv6l)         image=arm32v6/alpine:3.9.5;;
         armv7l)         image=arm32v7/alpine:3.9.5;;
         aarch64)        image=arm64v8/alpine:3.9.5;;
         *)
