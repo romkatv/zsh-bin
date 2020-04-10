@@ -18,6 +18,7 @@ file:zsh-5.8-cygwin_nt-10.0-x86_64.tar.gz; md5:a83d9fe7f1954569af09d934ff4223b3;
 file:zsh-5.8-darwin-x86_64.tar.gz;         md5:cb70a7e36f94bd5205bba952b8abf2bf; sha256:b0cec1e2a80570cd304c5743d0cb5f311ad2d31613cd6e07fd219b78e6f6adb3;
 file:zsh-5.8-freebsd-amd64.tar.gz;         md5:04d6b5bd0b3cb723c003eb4c7aea51d8; sha256:e377d8067ae9e15abeb9250ad323509aac78d57f13b06efcc5ecf8a8c242d5c0;
 file:zsh-5.8-linux-aarch64.tar.gz;         md5:a10c08d39160e57172d3187ac65be37d; sha256:4481eedd6b6637238dd3a7ce68ce0f150cc2c2ed8a6d7cdd2b881ad7173de943;
+file:zsh-5.8-linux-armv6l.tar.gz;          md5:ab4577ed10c70a3bafc4143ec342c1bf; sha256:a60dbef025df5f382ceeeae15d5a2cd47b9776c231dab0b37602eaa444926251;
 file:zsh-5.8-linux-armv7l.tar.gz;          md5:fcae87d476fa8b67258a35dfd1efa9dd; sha256:43cce310f4b7a0c1c3560ddc9cf93e949bb9d4959d1bf923274c6385a7e18e0f;
 file:zsh-5.8-linux-i386.tar.gz;            md5:1ed32088cb792fd291d1d31c01d55f7c; sha256:fe36e8db068b5df7bef14e4a790c501c185e4db1abf8dc9410ee8a16a9d85bae;
 file:zsh-5.8-linux-i586.tar.gz;            md5:ad54dba9ec8130dd060c899251e38832; sha256:7dd0930bfa0f1f526eb4e9a8dae54599bc2972f345ad11e627207bff0b48d084;
