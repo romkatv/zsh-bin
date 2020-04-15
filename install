@@ -219,10 +219,14 @@ if [ -z "$dir" ]; then
   printf "Custom directory: "
   read -r dir
   check_dir "$dir"
+  if [ -z "$quiet" ]; then
+    echo
+  fi
+elif [ -z "$quiet" -a "$num_dirs" != 1 ]; then
+  echo
 fi
 
 if [ -z "$quiet" ]; then
-  echo
   echo "Installing Zsh 5.8 to $dir"
 fi
 
