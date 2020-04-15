@@ -278,3 +278,32 @@ there is no `yodl` for macOS and porting it is a daunting task. To get out of th
 pulls man pages and help files from `zsh-5.8-linux-x86_64.tar.gz` and embeds them in
 `zsh-5.8-darwin-x86_64.tar.gz`. So if you are trying to reproduce the macOS build, you'll need to
 start by building Zsh for Linux-x86_64.
+
+---
+
+If installation instructions are not followed, certain things won't work.
+
+For example, if instead of running `install` you simply download and extract
+`zsh-5.8-linux-x86_64.tar.gz`, you'll get errors when trying to use builtin autoloadable functions:
+
+```text
+add-zsh-hook: function definition file not found
+is-at-least: function definition file not found
+compinit: function definition file not found
+```
+
+If you don't add `bin` subdirectory of the installation directory to `PATH`, `zsh` command may fail:
+
+```zsh
+zsh: command not found
+```
+
+If you work around this problem by adding a symbolic link to `zsh` to a directory in your `PATH`,
+`man zsh` may still fail:
+
+```text
+No manual entry for zsh
+```
+
+The easiest solution for problems of this kind is to follow installation instructions. If you cannot
+or don't want to, improvise.
