@@ -1,9 +1,7 @@
 #!/bin/sh
 #
-# Usage: build [-m ARCH] [-c CPU] [-i IMAGE] [-d CMD]
-#
-# Type `build -h` for help and see https://github.com/romkatv/zsh-bin
-# for full documentation.
+# Type `build -h` for usage and see https://github.com/romkatv/zsh-bin
+# for documentation.
 
 set -ue
 
