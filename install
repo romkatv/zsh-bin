@@ -1,6 +1,7 @@
 #!/bin/sh
 #
-# Pass '-h' for usage or read it in the source code below.
+# Type `install -h` for usage and see https://github.com/romkatv/zsh-bin
+# for documentation.
 
 {
 
