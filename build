@@ -166,18 +166,19 @@ case "$ZSH_BIN_KERNEL" in
     fetch "$zsh_doc_url" "$zsh_doc_sha256"
   ;;
   msys*|mingw*)
-    pacman -Sy --needed --noconfirm \
-      autoconf                      \
-      binutils                      \
-      gcc                           \
-      groff                         \
-      libiconv-devel                \
-      make                          \
-      man                           \
-      ncurses-devel                 \
-      perl                          \
-      pcre-devel                    \
-      rsync                \
+    pacman -Syu --noconfirm
+    pacman -S --needed --noconfirm \
+      autoconf                     \
+      binutils                     \
+      gcc                          \
+      groff                        \
+      libiconv-devel               \
+      make                         \
+      man                          \
+      ncurses-devel                \
+      perl                         \
+      pcre-devel                   \
+      rsync                        \
       yodl
   ;;
   cygwin*)
