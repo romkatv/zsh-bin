@@ -192,7 +192,7 @@ function build-windows() {
     msys_nt-10.0-*)
       tmp='/c/tmp'
       env='MSYSTEM=MSYS'
-      intro='pacman -Sy --needed --noconfirm git; '
+      intro='pacman -Syu --noconfirm; pacman -S --needed --noconfirm git; '
       intro+='PATH="$PATH:/usr/bin/site_perl:/usr/bin/vendor_perl:/usr/bin/core_perl"'
     ;|
     cygwin_nt-10.0-*)
