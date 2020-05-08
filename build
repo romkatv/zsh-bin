@@ -511,7 +511,7 @@ cat >share/zsh/5.8/scripts/relocate <<-\END
 
 	if [ "$OPTIND" -le $# ]; then
 	  >&2 echo "[error] unexpected positional argument"
-	  return 1
+	  exit 1
 	fi
 
 	if [ -z "$src" ]; then
@@ -745,7 +745,7 @@ done
 
 if [ "$OPTIND" -le $# ]; then
   >&2 echo "[error] unexpected positional argument"
-  return 1
+  exit 1
 fi
 
 if [ -z "$ZSH_BIN_ARCH" ]; then
