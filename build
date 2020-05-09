@@ -160,7 +160,13 @@ case "$ZSH_BIN_KERNEL" in
       >&2 echo "[error] please install homebrew from https://brew.sh/ and retry"
       exit 1
     fi
-    brew install autoconf libiconv ncurses pcre wget
+    for formula in autoconf libiconv ncurses pcre wget; do
+      if brew list "$formula" &>/dev/null; then
+        brew upgrade "$formula"
+      else
+        brew install "$formula"
+      fi
+    done
     mkdir -- "$workdir"/zsh_doc
     cd -- "$workdir"/zsh_doc
     fetch "$zsh_doc_url" "$zsh_doc_sha256"
