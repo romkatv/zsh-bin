@@ -31,6 +31,22 @@ file:zsh-5.8-msys_nt-10.0-x86_64.tar.gz;   md5:dfd96a7ec06f0b3c8c23cf459d07f529;
 readonly lf="
 "
 
+if [ -t 1 ]; then
+  readonly _0="$(printf '\033[0m')"
+  readonly _B="$(printf '\033[1m')"
+  readonly _U="$(printf '\033[4m')"
+  readonly _R="$(printf '\033[31m')"
+  readonly _G="$(printf '\033[32m')"
+  readonly _Y="$(printf '\033[33m')"
+else
+  readonly _0=
+  readonly _B=
+  readonly _U=
+  readonly _R=
+  readonly _G=
+  readonly _Y=
+fi
+
 usage="$(cat <<END
 Usage: install [OPTIONS] [-t FILE] [-a <sha256|md5>]...
                [OPTIONS] -f FILE
@@ -59,7 +75,7 @@ Options:
     Install to this directory. If specified more than once, present
     an interactive dialog to choose the directory. Empty argument
     means a custom directory (requires manual user input). If '-d'
-    is not specified, the effect is dential to this:
+    is not specified, the effect is idential to this:
 
       -d /usr/local -d ~/.local -d ""
 END
@@ -67,7 +83,7 @@ END
 
 absfile() {
   if [ ! -e "$1" ]; then
-    >&2 echo "[error] file not found: $1"
+    >&2 echo "${_R}error${_0}: file not found: ${_U}$1${_0}"
     return 1
   fi
   local dir base
@@ -78,25 +94,68 @@ absfile() {
 
 check_dir() {
   if [ -z "$1" ]; then
-    >&2 echo "[error] directory cannot be empty string"
+    >&2 echo "${_R}error${_0}: directory cannot be empty string"
     exit 1
   fi
   if [ -z "${1##~*}" ]; then
-    >&2 echo "[error] please expand '~' in directory name: $1"
+    >&2 echo "${_R}error${_0}: please expand ${_U}~${_0} in directory name: ${_U}$1${_0}"
     exit 1
   fi
   if [ -z "${1##//*}" ]; then
-    >&2 echo "[error] directory cannot start with '//': $1"
+    >&2 echo "${_R}error${_0}: directory cannot start with ${_U}//${_0}: ${_U}$1${_0}"
     exit 1
   fi
 }
 
+add_dir() {
+  num_dirs=$((num_dirs + 1))
+  dirs="$dirs${num_dirs}${1}${lf}"
+  if [ -n "$1" ]; then
+    dirs_c="$dirs_c  ${_B}($num_dirs)${_0} ${_U}${1}${_0}${lf}"
+  else
+    dirs_c="$dirs_c  ${_B}($num_dirs)${_0} custom directory (input required)${lf}"
+  fi
+}
+
+check_sudo() {
+  local dir="$1"
+  sudo=
+  while true; do
+    if [ -e "$dir" ]; then
+      if [ ! -d "$dir" ]; then
+        >&2 echo "${_R}error${_0}: not a directory: ${_U}$dir${_0}"
+        return 1
+      fi
+      if [ ! -w "$dir" ]; then
+        if [ "$euid" = 0 ]; then
+          >&2 echo "${_R}error${_0}: directory not writable: ${_U}$dir${_0}"
+          return 1
+        else
+          if [ -z "$quiet" ]; then
+            echo "${_Y}===>${_0} using ${_U}${_G}sudo${_0} for installation"
+          fi
+          sudo=sudo
+        fi
+      fi
+      break
+    fi
+    if [ "$dir" = / -o "$dir" = . ]; then
+      break
+    fi
+    dir="$(dirname -- "$dir")"
+  done
+}
+
 dirs=
+dirs_c=
 num_dirs=0
 quiet=
 algos=
 url=
 file=
+sudo=
+
+command -v sudo >/dev/null 2>&1 && euid="$(id -u 2>/dev/null)" || euid=0
 
 while getopts ':hqd:a:f:u:' opt "$@"; do
   case "$opt" in
@@ -106,115 +165,140 @@ while getopts ':hqd:a:f:u:' opt "$@"; do
     ;;
     q)
       if [ -n "$quiet" ]; then
-        >&2 echo "[error] duplicate option: -$opt"
+        >&2 echo "${_R}error${_0} duplicate option: ${_B}-${opt}${_0}"
         exit 1
       fi
       quiet=1
     ;;
     d)
-      if printf "%s" "$dirs" | cut -b 7- | grep -qxF -- "$OPTARG"; then
-        >&2 echo "[error] duplicate option: -$opt $OPTARG"
+      if printf "%s" "$dirs" | cut -b 2- | grep -qxF -- "$OPTARG"; then
+        >&2 echo "${_R}error${_0}: duplicate option: ${_B}-${opt} ${OPTARG}${_0}"
         exit 1
       fi
       if [ "$(printf "%s" "$OPTARG" | wc -l)" != 0 ]; then
-        >&2 echo "[error] incorrect value of -$opt: $OPTARG"
+        >&2 echo "${_R}error${_0}: incorrect value of ${_B}-${opt}${_0}: ${_B}${OPTARG}${_0}"
         exit 1
       fi
       if [ "$num_dirs" = 9 ]; then
-        >&2 echo "[error] too many options: -$opt"
+        >&2 echo "${_R}error${_0}: too many options: ${_B}-${opt}${_0}"
         exit 1
       fi
       if [ -n "$OPTARG" ]; then
         check_dir "$OPTARG"
       fi
-      num_dirs=$((num_dirs + 1))
-      dirs="$dirs  ($num_dirs) ${OPTARG}${lf}"
+      add_dir "$OPTARG"
     ;;
     a)
       case "$OPTARG" in
         sha256|md5)
           if [ -n "$algos" -a -z "${algos##*<$OPTARG>*}" ]; then
-            >&2 echo "[error] duplicate option: -$opt $OPTARG"
+            >&2 echo "${_R}error${_0}: duplicate option: ${_B}-${opt} ${OPTARG}${_0}"
             exit 1
           fi
           algos="$algos<$OPTARG>"
         ;;
         *)
-          >&2 echo "[error] incorrect value of -$opt: $OPTARG"
+          >&2 echo "${_R}error${_0}: incorrect value of ${_B}-${opt}${_0}: ${_B}${OPTARG}${_0}"
           exit 1
         ;;
       esac
     ;;
     f)
       if [ -n "$file" ]; then
-        >&2 echo "[error] duplicate option: -$opt"
+        >&2 echo "${_R}error${_0}: duplicate option: ${_B}-${opt}${_0}"
         exit 1
       fi
       if [ -z "$OPTARG" ]; then
-        >&2 echo "[error] incorrect value of -$opt: $OPTARG"
+        >&2 echo "${_R}error${_0}: incorrect value of ${_B}-${opt}${_0}: ${_B}${OPTARG}${_0}"
         exit 1
       fi
       file="$(absfile "$OPTARG")"
     ;;
     u)
       if [ -n "$url" ]; then
-        >&2 echo "[error] duplicate option: -$opt"
+        >&2 echo "${_R}error${_0}: duplicate option: ${_B}-${opt}${_0}"
         exit 1
       fi
       if [ -z "$OPTARG" ]; then
-        >&2 echo "[error] incorrect value of -$opt: $OPTARG"
+        >&2 echo "${_R}error${_0}: incorrect value of ${_B}-${opt}${_0}: ${_B}${OPTARG}${_0}"
         exit 1
       fi
       url="$OPTARG"
     ;;
-    \?) >&2 echo "[error] invalid option: -$OPTARG"           ; exit 1;;
-    :)  >&2 echo "[error] missing required argument: -$OPTARG"; exit 1;;
-    *)  >&2 echo "[internal error] unhandled option: -$opt"   ; exit 1;;
+    \?) >&2 echo "${_R}error${_0}: invalid option: ${_B}-${OPTARG}${_0}"           ; exit 1;;
+    :)  >&2 echo "${_R}error${_0}: missing required argument: ${_B}-${OPTARG}${_0}"; exit 1;;
+    *)  >&2 echo "${_R}internal error${_0}: unhandled option: ${_B}-${opt}${_0}"   ; exit 1;;
   esac
 done
 
 if [ "$OPTIND" -le $# ]; then
-  >&2 echo "[error] unexpected positional argument"
+  >&2 echo "${_R}error${_0}: unexpected positional argument"
   return 1
 fi
 
 if [ -n "$algos" ]; then
   if [ -n "$file" ]; then
-    >&2 echo "[error] incompatible options: -f and -a"
+    >&2 echo "${_R}error${_0}: incompatible options: ${_B}-f${_0} and ${_B}-a${_0}"
     exit 1
   fi
   if [ -n "$url" ]; then
-    >&2 echo "[error] incompatible options: -u and -a"
+    >&2 echo "${_R}error${_0}: incompatible options: ${_B}-u${_0} and ${_B}-a${_0}"
     exit 1
   fi
 fi
 
-if [ -z "$dirs" ]; then
-  for dir in /usr/local ~/.local ""; do
-    num_dirs=$((num_dirs + 1))
-    dirs="$dirs  ($num_dirs) ${dir}${lf}"
-  done
+if [ "$num_dirs" = 0 ]; then
+  add_dir /usr/local
+  add_dir ~/.local
+  add_dir ""
+
+  dirs_c="  ${_B}(1)${_0} ${_U}/usr/local${_0}        ${_Y}|${_0}"
+  if check_sudo /usr/local >/dev/null 2>/dev/null; then
+    if [ -n "$sudo" ]; then
+      dirs_c="${dirs_c} uses ${_U}${_G}sudo${_0}"
+    else
+      dirs_c="${dirs_c} does not need ${_U}${_G}sudo${_0}"
+    fi
+    if [ -d /usr/local ]; then
+      dirs_c="${dirs_c} (${_B}recommended${_0})"
+    fi
+  else
+    dirs_c="${dirs_c} ${_R}not writable${_0}"
+  fi
+
+  dirs_c="${dirs_c}${lf}  ${_B}(2)${_0} ${_U}~/.local${_0}          ${_Y}|${_0}"
+  if check_sudo ~/.local >/dev/null 2>/dev/null; then
+    if [ -n "$sudo" ]; then
+      dirs_c="${dirs_c} uses ${_U}${_G}sudo${_0}"
+    else
+      dirs_c="${dirs_c} does not need ${_U}${_G}sudo${_0}"
+    fi
+  else
+    dirs_c="${dirs_c} ${_R}not writable${_0}"
+  fi
+
+  dirs_c="${dirs_c}${lf}  ${_B}(3)${_0} custom directory  ${_Y}|${_0} manual input required${lf}"
 fi
 
 if [ "$num_dirs" = 1 ]; then
   choice=1
 else
   while true; do
-    echo "Choose installation directory for Zsh 5.8:"
+    echo "Choose installation directory for ${_G}Zsh 5.8${_0}:"
     echo ""
-    printf "%s" "$dirs" | sed -E 's/^(  \([0-9]*\) )$/\1Custom directory (input required)/'
+    printf "%s" "$dirs_c"
     echo ""
     printf "Choice: "
     read -r choice
-    if printf "%s" "$dirs" | cut -b 4 | grep -qxF -- "$choice"; then
+    if printf "%s" "$dirs" | cut -b 1 | grep -qxF -- "$choice"; then
       break
     fi
-    >&2 echo "[error] invalid choice: $choice"
+    >&2 echo "Invalid choice: ${_R}$choice${_0}. Try again."
     echo
   done
 fi
 
-dir="$(printf "%s" "$dirs" | sed "${choice}!d" | cut -b 7-)"
+dir="$(printf "%s" "$dirs" | sed "${choice}!d" | cut -b 2-)"
 if [ -z "$dir" ]; then
   printf "Custom directory: "
   read -r dir
@@ -227,37 +311,10 @@ elif [ -z "$quiet" -a "$num_dirs" != 1 ]; then
 fi
 
 if [ -z "$quiet" ]; then
-  echo "Installing Zsh 5.8 to $dir"
+  printf "%s\n" "${_Y}===>${_0} installing ${_G}Zsh 5.8${_0} to ${_U}$dir${_0}"
 fi
 
-sudo=
-command -v sudo >/dev/null 2>&1 && euid="$(id -u 2>/dev/null)" || euid=0
-
-parent="$dir"
-while true; do
-  if [ -e "$parent" ]; then
-    if [ ! -d "$parent" ]; then
-      >&2 echo "[error] not a directory: $parent"
-      exit 1
-    fi
-    if [ ! -w "$parent" ]; then
-      if [ "$euid" = 0 ]; then
-        >&2 echo "[error] directory not writable: $parent"
-        exit 1
-      else
-        if [ -z "$quiet" ]; then
-          echo "Will use 'sudo' because directory is not writable: $parent"
-        fi
-        sudo=sudo
-      fi
-    fi
-    break
-  fi
-  if [ "$parent" = / -o "$parent" = . ]; then
-    break
-  fi
-  parent="$(dirname -- "$parent")"
-done
+check_sudo "$dir"
 
 $sudo mkdir -p -- "$dir"
 cd -- "$dir"
@@ -281,9 +338,9 @@ if [ -z "$file" -a -z "$url" ]; then
   url="$url_base/zsh-5.8-${kernel}-${arch}.tar.gz"
 
   if [ -n "${archives##*file:${url##*/};*}" ]; then
-    >&2 echo "[error] there is no prebuilt binary for your architecture"
+    >&2 echo "${_R}error${_0}: there is no prebuilt binary for your architecture"
     >&2 echo
-    >&2 echo "See https://github.com/romkatv/zsh-bin#compiling to build one."
+    >&2 echo "See ${_U}https://github.com/romkatv/zsh-bin#compiling${_0} for building one."
     exit 1
   fi
 
@@ -298,27 +355,34 @@ if [ -n "$url" ]; then
   trap cleanup INT QUIT TERM EXIT ILL PIPE
 
   if [ -z "$quiet" ]; then
-    echo "Downloading $url"
+    echo "${_Y}===>${_0} fetching ${_U}${url##*/}${_0}"
   fi
 
+  set +e
+
   if command -v curl >/dev/null 2>&1; then
-    curl -fsSLo "$file" -- "$url"
+    err="$(command curl -fsSLo "$file" -- "$url" 2>&1)"
   elif command -v wget >/dev/null 2>&1; then
-    if ! err="$(wget -O "$file" -- "$url" 2>&1)"; then
-      >&2 printf "%s" "$err"
-      exit 1
-    fi
+    err="$(command wget -O "$file" -- "$url" 2>&1)"
   else
-    >&2 echo "[error] please install curl or wget and retry"
+    >&2 echo "${_R}error${_0}: please install ${_G}curl${_0} or ${_G}wget${_0} and retry"
     exit 1
   fi
+
+  if [ $? != 0 ]; then
+    >&2 printf "%s\n" "$err"
+    >&2 echo "${_R}error${_0}: failed to download ${_U}$url${_0}"
+    exit 1
+  fi
+
+  set -e
 else
   cleanup() { true; }
 fi
 
 if [ "$check_sig" = 1 ]; then
   if [ -z "$quiet" ]; then
-    echo "Verifying archive integrity"
+    echo "${_Y}===>${_0} verifying archive integrity"
   fi
 
   for algo in sha256 md5; do
@@ -351,42 +415,42 @@ if [ "$check_sig" = 1 ]; then
         fi
       ;;
       *)
-        >&2 echo "[internal error] unhandled algorithm: $algo"
+        >&2 echo "${_R}internal error${_0}: unhandled algorithm: ${_B}$algo${_0}"
         exit 1
       ;;
     esac
     if [ "$hash" != none ]; then
       if [ -n "${archives##* $algo:$hash;*}" ]; then
-        >&2 echo "[error] $algo signature mismatch"
+        >&2 echo "${_R}error${_0}: ${_B}$algo${_0} signature mismatch"
         >&2 echo ""
         >&2 echo "Expected:"
         >&2 echo ""
-        >&2 echo "  $(printf "%s" "$archives" | grep -F -- "${url##*/}" | sed 's/  */ /g')"
+        >&2 echo "  ${_G}$(printf "%s" "$archives" | grep -F -- "${url##*/}" | sed 's/  */ /g')${_0}"
         >&2 echo ""
         >&2 echo "Found:"
         >&2 echo ""
-        >&2 echo "  $algo:$hash"
+        >&2 echo "  ${_R}$algo:$hash${_0}"
         exit 1
       fi
       if [ -z "$quiet" ]; then
-        echo "  - $algo signature matches"
+        echo "${_Y}===>${_0} ${_B}$algo${_0} signature matches"
       fi
       algos="${algos##*<$algo>*}"
     else
       if [ -z "$quiet" ]; then
-        echo "  - no local tools available to verify $algo signature"
+        echo "${_Y}===>${_0} no tools to verify ${_B}$algo${_0} signature"
       fi
     fi
   done
 fi
 
 if [ -n "$algos" ]; then
-  >&2 echo "[error] unable to verify archive integrity: no suitable tools available"
+  >&2 echo "${_R}error${_0}: no tools available to verify archive integrity"
   exit 1
 fi
 
 if [ -z "$quiet" ]; then
-  echo "Extracting files"
+  echo "${_Y}===>${_0} extracting files"
 fi
 
 $sudo tar -xzf "$file"
@@ -396,14 +460,14 @@ cleanup
 
 if [ -z "$quiet" ]; then
   echo ""
-  echo "Zsh 5.8 successfully installed to $dir"
+  echo "Installed ${_G}Zsh 5.8${_0} to ${_U}$dir${_0}"
   echo ""
   echo "To start Zsh, type:"
   echo ""
   if ! zsh="$(command -v zsh 2>/dev/null)" || [ "$zsh" != "$dir/bin/zsh" ]; then
-    echo '  export PATH="'$dir'/bin:$PATH"'
+    echo "  ${_Y}export${_0} PATH=${_Y}\"$dir/bin:\$PATH\"${_0}"
   fi
-  echo "  zsh"
+  echo "  ${_G}zsh${_0}"
   echo
 fi
 
