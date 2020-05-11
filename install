@@ -269,7 +269,7 @@ if [ "$num_dirs" = 0 ]; then
   add_dir ~/.local
   add_dir ""
 
-  dirs_c="  ${_B}(1)${_0} ${_U}/usr/local${_0}        ${_Y}|${_0}"
+  dirs_c="  ${_B}(1)${_0} ${_U}/usr/local${_0}        ${_Y}<=${_0}"
   if check_sudo /usr/local >/dev/null 2>/dev/null; then
     if [ -n "$sudo" ]; then
       dirs_c="${dirs_c} uses ${_U}${_G}sudo${_0}"
@@ -283,7 +283,7 @@ if [ "$num_dirs" = 0 ]; then
     dirs_c="${dirs_c} ${_R}not writable${_0}"
   fi
 
-  dirs_c="${dirs_c}${lf}  ${_B}(2)${_0} ${_U}~/.local${_0}          ${_Y}|${_0}"
+  dirs_c="${dirs_c}${lf}  ${_B}(2)${_0} ${_U}~/.local${_0}          ${_Y}<=${_0}"
   if check_sudo ~/.local >/dev/null 2>/dev/null; then
     if [ -n "$sudo" ]; then
       dirs_c="${dirs_c} uses ${_U}${_G}sudo${_0}"
@@ -294,7 +294,7 @@ if [ "$num_dirs" = 0 ]; then
     dirs_c="${dirs_c} ${_R}not writable${_0}"
   fi
 
-  dirs_c="${dirs_c}${lf}  ${_B}(3)${_0} custom directory  ${_Y}|${_0} manual input required${lf}"
+  dirs_c="${dirs_c}${lf}  ${_B}(3)${_0} custom directory  ${_Y}<=${_0} manual input required${lf}"
 fi
 
 if [ "$num_dirs" = 1 ]; then
