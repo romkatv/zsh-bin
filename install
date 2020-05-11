@@ -78,6 +78,11 @@ Options:
     is not specified, the effect is idential to this:
 
       -d /usr/local -d ~/.local -d ""
+
+  -s FD
+
+    On success, write the path to the installation directory to this
+    file descriptor.
 END
 )"
 
@@ -154,10 +159,11 @@ algos=
 url=
 file=
 sudo=
+fd=
 
 command -v sudo >/dev/null 2>&1 && euid="$(id -u 2>/dev/null)" || euid=0
 
-while getopts ':hqd:a:f:u:' opt "$@"; do
+while getopts ':hqd:s:a:f:u:' opt "$@"; do
   case "$opt" in
     h)
       printf '%s\n' "$usage"
@@ -187,6 +193,17 @@ while getopts ':hqd:a:f:u:' opt "$@"; do
         check_dir "$OPTARG"
       fi
       add_dir "$OPTARG"
+    ;;
+    s)
+      if [ -n "$fd" ]; then
+        >&2 echo "${_R}error${_0} duplicate option: ${_B}-${opt}${_0}"
+        exit 1
+      fi
+      if ! printf '%s' "$OPTARG" | tr '\n' x | grep -qxE '[1-9][0-9]*'; then
+        >&2 echo "${_R}error${_0}: incorrect value of ${_B}-${opt}${_0}: ${_B}${OPTARG}${_0}"
+        exit 1
+      fi
+      fd="$OPTARG"
     ;;
     a)
       case "$OPTARG" in
@@ -469,6 +486,10 @@ if [ -z "$quiet" ]; then
   fi
   echo "  ${_G}zsh${_0}"
   echo
+fi
+
+if [ -n "$fd" ]; then
+  printf "%s\n" "$dir" >&"$fd"
 fi
 
 }
