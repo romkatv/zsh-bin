@@ -286,6 +286,12 @@ esac
 export DLLDFLAGS="-shared"
 export LDFLAGS="$CFLAGS $LDFLAGS"
 
+host="$(./config.guess)"
+if [ -z "$host" -o -n "${host##*?-?*}" ]; then
+  >&2 echo "[error] unexpected output from ./config.guess: $host"
+  exit 1
+fi
+
 ./Util/preconfig
 ./configure                          \
   --prefix="$workdir/$name"          \
@@ -301,7 +307,7 @@ export LDFLAGS="$CFLAGS $LDFLAGS"
   --enable-unicode9                  \
   --with-tcsetpgrp                   \
   --disable-dynamic                  \
-  --host="$ZSH_BIN_ARCH"             \
+  --host="$ZSH_BIN_ARCH-${host#*-}"  \
   --enable-custom-patchlevel=zsh-5.8-0-g77d203f
 
 sed_i() {
