@@ -38,13 +38,20 @@ Here's what it looks like:
 $ sh -c "$(curl -fsSL https://raw.githubusercontent.com/romkatv/zsh-bin/master/install)"
 Choose installation directory for Zsh 5.8:
 
-  (1) /usr/local
-  (2) /home/romka/.local
-  (3) Custom directory (input required)
+  (1) /usr/local        <= does not need sudo (recommended)
+  (2) ~/.local          <= does not need sudo
+  (3) custom directory  <= manual input required
 
 Choice: 1
 
-Zsh 5.8 successfully installed to /usr/local
+===> installing Zsh 5.8 to /usr/local
+===> fetching zsh-5.8-linux-x86_64.tar.gz
+===> verifying archive integrity
+===> sha256 signature matches
+===> md5 signature matches
+===> extracting files
+
+Installed Zsh 5.8 to /usr/local
 
 To start Zsh, type:
 
