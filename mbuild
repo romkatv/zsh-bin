@@ -49,6 +49,8 @@
 #
 # IMPORTANT: Install msys2 and cygwin one at a time.
 #
+# IMPORTANT: msys2 builder can reboot the build machine.
+#
 # Option 1: OpenSSH for Windows
 #
 # - Install OpenSSH: https://docs.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse.
@@ -72,9 +74,9 @@
 # - Install WSL.
 # - Install Ubuntu.
 # - Install sshd.
-#   $ sudo apt install openssh-server
-#   $ sudo dpkg-reconfigure openssh-server
-#   $ sudo tee /etc/ssh/sshd_config <<\END
+#   $ apt install openssh-server
+#   $ dpkg-reconfigure openssh-server
+#   $ cat >/etc/ssh/sshd_config <<\END
 #     ClientAliveInterval 60
 #     AcceptEnv TERM LANG LC_*
 #     PermitRootLogin no
@@ -83,8 +85,9 @@
 #     AllowStreamLocalForwarding no
 #     AuthenticationMethods publickey
 #   END
-#   sudo service ssh --full-restart
+#   service ssh --full-restart
 # - Add your public ssh key to ~/.ssh/authorized_keys.
+# - Make `sshd` start when Windows boots.
 
 'emulate' '-L' 'zsh' '-o' 'no_aliases' '-o' 'err_return'
 setopt no_unset extended_glob pipe_fail prompt_percent typeset_silent \
@@ -132,7 +135,7 @@ local -r locks=$rootdir/locks
 local -r archives=$rootdir/archives
 
 function usage() {
-  print -r -- 'usage: mbuild [-b git-ref] [kernel-arch]...'
+  print -r -- 'usage: mbuild [-b REF] [KERNEL-ARCH]...'
 }
 
 local OPTARG opt git_ref=master
@@ -177,7 +180,9 @@ local build='
 
 function build-unix() {
   local intro
-  [[ $2 != darwin-* ]] || intro='PATH="/usr/local/bin:$PATH"'
+  case $2 in
+    darwin-*) intro='PATH="/usr/local/bin:$PATH"';;
+  esac
   ssh $1 -- /bin/sh -uex <<<"
     $intro
     cd /tmp
@@ -195,20 +200,58 @@ function build-windows() {
 
   local tmp env bin intro
   case $2 in
+    cygwin_nt-10.0-i686)   bin='cygwin32/bin'  ;|
+    cygwin_nt-10.0-x86_64) bin='cygwin64/bin'  ;|
+    msys_nt-10.0-i686)     bin='msys32/usr/bin';|
+    msys_nt-10.0-x86_64)   bin='msys64/usr/bin';|
+    cygwin_nt-10.0-*)
+      tmp='/cygdrive/c/tmp'
+    ;|
     msys_nt-10.0-*)
       tmp='/c/tmp'
       env='MSYSTEM=MSYS'
       intro='pacman -Syu --noconfirm; pacman -S --needed --noconfirm git; '
       intro+='PATH="$PATH:/usr/bin/site_perl:/usr/bin/vendor_perl:/usr/bin/core_perl"'
+      while true; do
+        # TODO: run autorebase only when getting an error that can be fixed by autorebasing.
+        break
+        local out
+        out="$(ssh $1 cmd.exe "$c/${bin%%/*}/autorebase.bat" 2>&1)"
+        [[ $out == *"The following DLLs couldn't be rebased"* ]] || break
+        # Reboot to get rid of whatever is using those DLLs.
+        ssh $1 powershell.exe <<<'Restart-Computer -Force' || true
+        sleep 30
+        while ! ssh $1 <<<''; do sleep 5; done
+      done
+      () {
+        while true; do
+          local -i fd
+          exec {fd}< <(
+            ssh $1 $c/$bin/env.exe $env c:/$bin/bash.exe -l 2>&1 <<<"
+              pacman -Syu --noconfirm
+              exit")
+          {
+            local line
+            while true; do
+              IFS= read -u $fd -r line || return 0
+              if [[ $line == *"warning: terminate MSYS2"* ]]; then
+                # At this point the machine is hosed. Rogue process with corrupted name
+                # is eating all CPU. The top SSH connection won't terminate on its own.
+                ssh $1 powershell.exe <<<'Restart-Computer -Force' || true
+                sleep 30
+                while ! ssh $1 <<<''; do sleep 5; done
+                break
+              fi
+            done
+          } always {
+            exec {fd}<&-
+            kill -- -$sysparams[procsubstpid] 2>/dev/null || true
+          }
+        done
+      } "$@"
     ;|
-    cygwin_nt-10.0-*)
-      tmp='/cygdrive/c/tmp'
-    ;|
-    msys_nt-10.0-i686)     bin='msys32/usr/bin';;
-    msys_nt-10.0-x86_64)   bin='msys64/usr/bin';;
-    cygwin_nt-10.0-i686)   bin='cygwin32/bin'  ;;
-    cygwin_nt-10.0-x86_64) bin='cygwin64/bin'  ;;
   esac
+
   ssh $1 $c/$bin/env.exe $env c:/$bin/bash.exe -l <<<"
     set -uex
     $intro
