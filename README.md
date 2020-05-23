@@ -38,7 +38,7 @@ Here's what it looks like:
 $ sh -c "$(curl -fsSL https://raw.githubusercontent.com/romkatv/zsh-bin/master/install)"
 Choose installation directory for Zsh 5.8:
 
-  (1) /usr/local        <= requires sudo (recommended)
+  (1) /usr/local        <= uses sudo (recommended)
   (2) ~/.local          <= does not need sudo
   (3) custom directory  <= manual input required
 
