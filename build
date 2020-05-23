@@ -60,9 +60,12 @@ if [ "$(narg $workdir)" != 1 -o -z "${workdir##*:*}" ]; then
 fi
 
 cleanup() {
-  cd /
-  rm -rf -- "$workdir"
   trap - INT QUIT TERM EXIT ILL PIPE
+  cd /
+  if ! rm -rf -- "$workdir"; then
+    sleep 5
+    rm -rf -- "$workdir"
+  fi
 }
 trap cleanup INT QUIT TERM EXIT ILL PIPE
 
