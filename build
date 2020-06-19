@@ -30,8 +30,8 @@ Options:
   -m ARCH   `uname -m` from the target machine; defaults to `uname -m`
             from the local machine
   -c CPU    generate machine instructions for CPU of this type; this
-            value gets passed as -march to gcc; inferred from ARCH
-            if not set explicitly
+            value gets passed as `-march` (or `-mcpu` for ppc64le) to gcc;
+            inferred from ARCH if not set explicitly
   -i IMAGE  docker image used for building zsh; inferred from ARCH
             if not set explicitly
   -d CMD    use this command instead of 'docker'; it must understand
@@ -307,9 +307,14 @@ cd -- "$workdir"
 fetch "$zsh_url" "$zsh_sha256"
 cd zsh-zsh-5.8
 
+case "$ZSH_BIN_CPU" in
+  powerpc64le) archflag="-mcpu";;
+  *)           archflag="-march";;
+esac
+
 name=zsh-5.8-"$ZSH_BIN_KERNEL"-"$ZSH_BIN_ARCH"
 
-export CFLAGS="-Wall -Wmissing-prototypes -march=$ZSH_BIN_CPU -DNDEBUG -O2 -flto -fno-strict-aliasing"
+export CFLAGS="-Wall -Wmissing-prototypes -archflag=$ZSH_BIN_CPU -DNDEBUG -O2 -flto -fno-strict-aliasing"
 export LDFLAGS=
 export EXELDFLAGS=
 export LIBS=
@@ -823,6 +828,7 @@ if [ -z "$ZSH_BIN_CPU" ]; then
     armv6l)         ZSH_BIN_CPU=armv6;;
     armv7l)         ZSH_BIN_CPU=armv7;;
     aarch64)        ZSH_BIN_CPU=armv8-a;;
+    ppc64le)        ZSH_BIN_CPU=powerpc64le;;
     x86_64|amd64)   ZSH_BIN_CPU=x86-64;;
     i386|i586|i686) ZSH_BIN_CPU="$ZSH_BIN_ARCH";;
     *)
@@ -845,6 +851,7 @@ case "$ZSH_BIN_KERNEL" in
         armv6l)         image=arm32v6/alpine:3.9.5;;
         armv7l)         image=arm32v7/alpine:3.9.5;;
         aarch64)        image=arm64v8/alpine:3.9.5;;
+        ppc64le)        image=ppc64le/alpine:3.9.5;;
         *)
           >&2 echo '[error] unable to infer docker image'
           >&2 echo 'Please specify explicitly with `-i IMAGE`.'
