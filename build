@@ -72,13 +72,22 @@ trap cleanup INT QUIT TERM EXIT ILL PIPE
 libiconv_version=1.16
 icmake_version=9.03.01
 yodl_version=4.02.01
+ncurses_version=6.2
+kitty_version=0.17.4
+termite_version=15
 
+ncurses_url=https://ftp.gnu.org/pub/gnu/ncurses/ncurses-$ncurses_version.tar.gz
+kitty_url=https://github.com/kovidgoyal/kitty/archive/v$kitty_version.tar.gz
+termite_url=https://github.com/thestinger/termite/archive/v$termite_version.tar.gz
 libiconv_url=https://ftp.gnu.org/pub/gnu/libiconv/libiconv-$libiconv_version.tar.gz
 icmake_url=https://gitlab.com/fbb-git/icmake/-/archive/$icmake_version/icmake-$icmake_version.tar.gz
 yodl_url=https://gitlab.com/fbb-git/yodl/-/archive/$yodl_version/yodl-$yodl_version.tar.gz
 zsh_url=https://github.com/zsh-users/zsh/archive/zsh-5.8.tar.gz
 zsh_doc_url=https://github.com/romkatv/zsh-bin/releases/download/v4.0.1/zsh-5.8-linux-x86_64.tar.gz
 
+ncurses_sha256=30306e0c76e0f9f1f0de987cf1c82a5c21e1ce6568b9227f7da5b71cbea86c9d
+kitty_sha256=a33dc3b683fb6c762c66908c437c95b71a5b9c98d998f05496895304a27f82e9
+termite_sha256=3ae9ebef28aad081c6c11351f086776e2fd9547563b2f900732b41c376bec05a
 libiconv_sha256=e6a1b1b589654277ee790cce3734f07876ac4ccfaecbee8afa0b649cf529cc04
 icmake_sha256=7c5c091f58f576da580238c5e3636e2038d9ecf5efb6562ae7e402910d9036e6
 yodl_sha256=0118efd6f05ddeed4910bb5e280a37a4d8e5c2f42fb2009c840b3d5c70f700f8
@@ -104,6 +113,8 @@ fetch() {
   tar -xzf "$archive"
 }
 
+ncurses_configure=
+
 case "$ZSH_BIN_KERNEL" in
   linux)
     apk update
@@ -119,9 +130,6 @@ case "$ZSH_BIN_KERNEL" in
       make           \
       man            \
       musl-dev       \
-      ncurses        \
-      ncurses-dev    \
-      ncurses-static \
       pcre-dev       \
       perl-utils     \
       rsync          \
@@ -146,9 +154,9 @@ case "$ZSH_BIN_KERNEL" in
       autoconf     \
       binutils     \
       gcc          \
+      gmake        \
       groff        \
       libiconv     \
-      ncurses      \
       perl5        \
       pcre         \
       rsync        \
@@ -163,7 +171,7 @@ case "$ZSH_BIN_KERNEL" in
       >&2 echo "[error] please install homebrew from https://brew.sh/ and retry"
       exit 1
     fi
-    for formula in autoconf libiconv ncurses pcre wget; do
+    for formula in autoconf libiconv pcre wget; do
       if brew list "$formula" &>/dev/null; then
         brew upgrade "$formula"
       else
@@ -175,6 +183,7 @@ case "$ZSH_BIN_KERNEL" in
     fetch "$zsh_doc_url" "$zsh_doc_sha256"
   ;;
   msys*|mingw*)
+    ncurses_configure='--with-pcre2'
     pacman -Syu --noconfirm
     pacman -S --needed --noconfirm \
       autoconf                     \
@@ -184,7 +193,6 @@ case "$ZSH_BIN_KERNEL" in
       libiconv-devel               \
       make                         \
       man                          \
-      ncurses-devel                \
       perl                         \
       pcre-devel                   \
       rsync                        \
@@ -204,7 +212,6 @@ case "$ZSH_BIN_KERNEL" in
         >&2 echo "  gcc-g++"
         >&2 echo "  groff"
         >&2 echo "  libiconv-devel"
-        >&2 echo "  libncurses-devel"
         >&2 echo "  make"
         >&2 echo "  perl"
         >&2 echo "  tar"
@@ -214,7 +221,7 @@ case "$ZSH_BIN_KERNEL" in
         exit 1
       fi
     done
-    for file in /usr/lib/libiconv.a /usr/lib/libncursesw.a /usr/share/terminfo; do
+    for file in /usr/lib/libiconv.a; do
       if [ ! -e "$file" ]; then
         >&2 echo "[error] not found: $file"
         exit 1
@@ -252,6 +259,45 @@ if [ ! -e "$workdir"/zsh_doc ] && ! command -v yodl >/dev/null 2>&1; then
 fi
 
 cd -- "$workdir"
+fetch "$ncurses_url" "$ncurses_sha256"
+cd ncurses-"$ncurses_version"
+./configure \
+  --prefix "$workdir"/ncurses \
+  --disable-pc-files \
+  --disable-mixed-case \
+  --disable-rpath \
+  --disable-bsdpad \
+  --disable-termcap \
+	--disable-rpath-hack \
+  --enable-widec \
+  --without-ada \
+  --without-manpages \
+  --without-tack \
+  --without-tests \
+  --without-pc-suffix \
+  --without-pkg-config-libdir \
+  --without-shared \
+  --without-debug \
+  --without-cxx-shared \
+  --without-gmp \
+  --without-dlsym \
+  --without-pcre2 \
+  --with-terminfo-dirs="/etc/terminfo:/usr/share/terminfo:/lib/terminfo:/usr/lib/terminfo"
+
+if commands gmake >/dev/null 2>/dev/null; then
+  gmake -j "$cpus" install
+else
+  make -j "$cpus" install
+fi
+
+cd -- "$workdir"
+fetch "$kitty_url" "$kitty_sha256"
+ncurses/bin/tic -x -o ncurses/share/terminfo kitty-"$kitty_version"/terminfo/kitty.terminfo
+cd -- "$workdir"
+fetch "$termite_url" "$termite_sha256"
+ncurses/bin/tic -x -o ncurses/share/terminfo termite-"$termite_version"/termite.terminfo
+
+cd -- "$workdir"
 fetch "$zsh_url" "$zsh_sha256"
 cd zsh-zsh-5.8
 
@@ -262,6 +308,9 @@ export LDFLAGS=
 export EXELDFLAGS=
 export LIBS=
 
+CFLAGS="$CFLAGS -I$workdir/ncurses/include"
+LDFLAGS="$LDFLAGS -L$workdir/ncurses/lib"
+
 case "$ZSH_BIN_KERNEL" in
   linux|freebsd|msys*|mingw*)
     EXELDFLAGS="$EXELDFLAGS -static"
@@ -271,9 +320,8 @@ case "$ZSH_BIN_KERNEL" in
     opt=/usr/local/opt
     mkdir -- "$workdir"/lib
     ln -s -- "$opt"/libiconv/lib/libiconv.a   "$workdir"/lib
-    ln -s -- "$opt"/ncurses/lib/libncursesw.a "$workdir"/lib
     ln -s -- "$opt"/pcre/lib/libpcre.a        "$workdir"/lib
-    CFLAGS="$CFLAGS -I$opt/libiconv/include -I$opt/ncurses/include -I$opt/pcre/include"
+    CFLAGS="$CFLAGS -I$opt/libiconv/include -I$opt/pcre/include"
     LDFLAGS="$LDFLAGS -L$workdir/lib"
     LIBS="$LIBS -lpcre"
   ;;
@@ -436,11 +484,7 @@ cd -- "$workdir/$name"
 strip bin/zsh
 rm -- bin/zsh-5.8
 
-if [ -d /usr/share/terminfo ]; then
-  rsync -a --copy-links --copy-dirlinks -- /usr/share/terminfo share/
-else
-  cp -L -- /usr/local/share/misc/terminfo.db share/
-fi
+rsync -a --copy-links --copy-dirlinks -- "$workdir"/ncurses/share/terminfo share/
 
 if [ -e "$workdir"/zsh_doc ]; then
   cp -r -- "$workdir"/zsh_doc/share/man share/
