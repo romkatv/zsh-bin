@@ -261,14 +261,17 @@ fi
 cd -- "$workdir"
 fetch "$ncurses_url" "$ncurses_sha256"
 cd ncurses-"$ncurses_version"
-./configure \
+mkdir fake-bin
+echo 'false' >fake-bin/ldconfig
+PATH="$fake_bin_dir:$PATH" ./configure \
   --prefix "$workdir"/ncurses \
   --disable-pc-files \
   --disable-mixed-case \
   --disable-rpath \
   --disable-bsdpad \
   --disable-termcap \
-	--disable-rpath-hack \
+  --disable-rpath-hack \
+  --enable-root-environ \
   --enable-widec \
   --without-ada \
   --without-manpages \
@@ -282,7 +285,8 @@ cd ncurses-"$ncurses_version"
   --without-gmp \
   --without-dlsym \
   --without-pcre2 \
-  --with-terminfo-dirs="/etc/terminfo:/usr/share/terminfo:/lib/terminfo:/usr/lib/terminfo"
+  --with-terminfo-dirs="/etc/terminfo:/usr/share/terminfo:/lib/terminfo:/usr/lib/terminfo" \
+  $ncurses_configure
 
 if command -v gmake >/dev/null 2>/dev/null; then
   gmake -j "$cpus" install
