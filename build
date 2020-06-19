@@ -263,6 +263,7 @@ fetch "$ncurses_url" "$ncurses_sha256"
 cd ncurses-"$ncurses_version"
 mkdir fake-bin
 echo 'false' >fake-bin/ldconfig
+chmod +x fake-bin/ldconfig
 fake_bin_dir="$(pwd)"/fake-bin
 PATH="$fake_bin_dir:$PATH" ./configure \
   --prefix "$workdir"/ncurses \
