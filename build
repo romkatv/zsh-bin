@@ -284,7 +284,7 @@ cd ncurses-"$ncurses_version"
   --without-pcre2 \
   --with-terminfo-dirs="/etc/terminfo:/usr/share/terminfo:/lib/terminfo:/usr/lib/terminfo"
 
-if commands gmake >/dev/null 2>/dev/null; then
+if command -v gmake >/dev/null 2>/dev/null; then
   gmake -j "$cpus" install
 else
   make -j "$cpus" install
