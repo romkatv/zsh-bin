@@ -314,7 +314,7 @@ esac
 
 name=zsh-5.8-"$ZSH_BIN_KERNEL"-"$ZSH_BIN_ARCH"
 
-export CFLAGS="-Wall -Wmissing-prototypes -archflag=$ZSH_BIN_CPU -DNDEBUG -O2 -flto -fno-strict-aliasing"
+export CFLAGS="-Wall -Wmissing-prototypes $archflag=$ZSH_BIN_CPU -DNDEBUG -O2 -flto -fno-strict-aliasing"
 export LDFLAGS=
 export EXELDFLAGS=
 export LIBS=
