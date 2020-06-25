@@ -372,6 +372,33 @@ fi
   --host="$ZSH_BIN_ARCH-${host#*-}"  \
   --enable-custom-patchlevel=zsh-5.8-0-g77d203f
 
+patch -u Src/signals.c <<\PATCH
+--- Src/signals.c	2020-06-25 11:49:02.139702908 +0200
++++ Src/signals.c.new	2020-06-25 11:48:57.839729722 +0200
+@@ -819,10 +819,20 @@
+ 	 */
+ 	if (pn->status == SP_RUNNING || WIFSTOPPED(pn->status)) {
+ 	    /*
++	     * Make https://github.com/microsoft/WSL/issues/3741 less likely to trigger.
++	     *
++	     * The following command hangs in WSL in Windows builds < 1903 without this hack.
++	     *
++	     *   zsh -fc 'while true; do print $((++i)); ( =true | =true ); done'
++	     */
++	    int real_sig = sig;
++	    if (pn->status == SP_RUNNING && sig == SIGCONT)
++		real_sig = 0;
++	    /*
+ 	     * kill -0 on a job is pointless. We still call kill() for each process
+ 	     * in case the user cares about it but we ignore its outcome.
+ 	     */
+-	    if ((err = kill(pn->pid, sig)) == -1 && errno != ESRCH && sig != 0)
++	    if ((err = kill(pn->pid, real_sig)) == -1 && errno != ESRCH && sig != 0)
+ 		return -1;
+ 	}
+     }
+PATCH
+
 sed_i() {
   [ $# -gt 1 ]
   local script="$1"
