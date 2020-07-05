@@ -77,7 +77,7 @@ kitty_version=0.17.4
 termite_version=15
 
 ncurses_url=https://ftp.gnu.org/pub/gnu/ncurses/ncurses-$ncurses_version.tar.gz
-kitty_url=https://github.com/kovidgoyal/kitty/archive/v$kitty_version.tar.gz
+kitty_url=https://raw.githubusercontent.com/kovidgoyal/kitty/v$kitty_version/terminfo/kitty.terminfo
 termite_url=https://github.com/thestinger/termite/archive/v$termite_version.tar.gz
 libiconv_url=https://ftp.gnu.org/pub/gnu/libiconv/libiconv-$libiconv_version.tar.gz
 icmake_url=https://gitlab.com/fbb-git/icmake/-/archive/$icmake_version/icmake-$icmake_version.tar.gz
@@ -86,7 +86,7 @@ zsh_url=https://github.com/zsh-users/zsh/archive/zsh-5.8.tar.gz
 zsh_doc_url=https://github.com/romkatv/zsh-bin/releases/download/v4.0.1/zsh-5.8-linux-x86_64.tar.gz
 
 ncurses_sha256=30306e0c76e0f9f1f0de987cf1c82a5c21e1ce6568b9227f7da5b71cbea86c9d
-kitty_sha256=a33dc3b683fb6c762c66908c437c95b71a5b9c98d998f05496895304a27f82e9
+kitty_sha256=26c89a6d915864eb1dec8f59e4aadffda85ab8bfd6074a0a25812d864b3c9a2c
 termite_sha256=3ae9ebef28aad081c6c11351f086776e2fd9547563b2f900732b41c376bec05a
 libiconv_sha256=e6a1b1b589654277ee790cce3734f07876ac4ccfaecbee8afa0b649cf529cc04
 icmake_sha256=7c5c091f58f576da580238c5e3636e2038d9ecf5efb6562ae7e402910d9036e6
@@ -99,18 +99,22 @@ cpus="$(getconf _NPROCESSORS_ONLN)" || cpus="$(sysctl -n hw.ncpu)" || cpus=8
 fetch() {
   local url="$1"
   local sha256="$2"
-  local archive="${url##*/}"
-  local base="${archive%.tar.gz}"
-  printf '%s  %s\n' "$sha256" "$archive" >"$base".sha256
-  if ! cp -- "$outdir/src/$archive" . 2>/dev/null || ! shasum -b -a 256 -c "$base".sha256; then
-    rm -f -- "$archive"
+  local filename="${url##*/}"
+  local base="${filename%.tar.gz}"
+  printf '%s  %s\n' "$sha256" "$filename" >"$base".sha256
+  if ! cp -- "$outdir/src/$filename" . 2>/dev/null || ! shasum -b -a 256 -c "$base".sha256; then
+    rm -f -- "$filename"
     wget -- "$url"
     shasum -b -a 256 -c "$base".sha256
     mkdir -p -- "$outdir"/src
-    cp -f -- "$archive" "$outdir"/src/tmp."$archive"
-    mv -f -- "$outdir"/src/tmp."$archive" "$outdir"/src/"$archive"
+    cp -f -- "$filename" "$outdir"/src/tmp."$filename"
+    mv -f -- "$outdir"/src/tmp."$filename" "$outdir"/src/"$filename"
   fi
-  tar -xzf "$archive"
+  case "$filename" in
+    *.tar.gz)
+      tar -xzf "$filename"
+    ;;
+  esac
 }
 
 ncurses_configure=
@@ -298,7 +302,7 @@ fi
 
 cd -- "$workdir"
 fetch "$kitty_url" "$kitty_sha256"
-ncurses/bin/tic -x -o ncurses/share/terminfo kitty-"$kitty_version"/terminfo/kitty.terminfo
+ncurses/bin/tic -x -o ncurses/share/terminfo kitty.terminfo
 cd -- "$workdir"
 fetch "$termite_url" "$termite_sha256"
 ncurses/bin/tic -x -o ncurses/share/terminfo termite-"$termite_version"/termite.terminfo
