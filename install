@@ -352,9 +352,10 @@ if [ -z "$file" -a -z "$url" ]; then
     cygwin_nt-10.*)  kernel=cygwin_nt-10.0;;
   esac
 
-  url="$url_base/zsh-5.8-${kernel}-${arch}.tar.gz"
+  filename="zsh-5.8-${kernel}-${arch}.tar.gz"
+  url="$url_base/$filename"
 
-  if [ -n "${archives##*file:${url##*/};*}" ]; then
+  if [ -n "${archives##*file:$filename;*}" ]; then
     >&2 echo "${_R}error${_0}: there is no prebuilt binary for your architecture"
     >&2 echo
     >&2 echo "See ${_U}https://github.com/romkatv/zsh-bin#compiling${_0} for building one."
