@@ -477,6 +477,17 @@ fi
 $sudo tar -xzf "$file"
 $sudo ./share/zsh/5.8/scripts/relocate
 
+$sudo ./bin/zsh -fc '
+  for pat in "[[:lower:]]" "[^[:lower:]]"; do
+    for hex in ./share/terminfo/[[:xdigit:]][[:xdigit:]](:t); do
+      printf -v char "\\x$hex"
+      [[ $char == $~pat ]] || continue
+      [ -e ./share/terminfo/$char ] && continue
+      ln -s -- "$hex" ./share/terminfo/$char 2>/dev/null ||
+        cp -r -- ./share/terminfo/$hex ./share/terminfo/$char || exit
+    done
+  done'
+
 cleanup
 
 if [ -z "$quiet" ]; then
