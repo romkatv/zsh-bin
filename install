@@ -478,14 +478,24 @@ $sudo tar -xzf "$file"
 $sudo ./share/zsh/5.8/scripts/relocate
 
 $sudo ./bin/zsh -fc '
+  setopt extended_glob                        || exit
+  zmodload -F zsh/files b:{zf_mv,zf_rm,zf_ln} || exit
+
   for pat in "[[:lower:]]" "[^[:lower:]]"; do
     for hex in ./share/terminfo/[[:xdigit:]][[:xdigit:]](:t); do
       printf -v char "\\x$hex"
-      [[ $char == $~pat ]] || continue
+      [[ $char == $~pat ]]          || continue
       [ -e ./share/terminfo/$char ] && continue
-      ln -s -- "$hex" ./share/terminfo/$char 2>/dev/null ||
+      zf_ln -s -- "$hex" ./share/terminfo/$char 2>/dev/null   ||
         cp -r -- ./share/terminfo/$hex ./share/terminfo/$char || exit
     done
+  done
+
+  for file in ./share/zsh/5.8/functions/*~*.[^/]#(.); do
+    tmp=$file.tmp.$$.zwc
+    zf_rm -f -- $tmp $file.zwc || exit
+    zcompile -R -- $tmp $file  || exit
+    zf_mv -f -- $tmp $file.zwc || exit
   done'
 
 cleanup
