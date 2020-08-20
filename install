@@ -181,7 +181,7 @@ while getopts ':hqd:s:a:f:u:' opt "$@"; do
         >&2 echo "${_R}error${_0}: duplicate option: ${_B}-${opt} ${OPTARG}${_0}"
         exit 1
       fi
-      if [ "$(printf "%s" "$OPTARG" | wc -l)" != 0 ]; then
+      if [ "$(printf "%s" "$OPTARG" | wc -l | tr -Cd '0-9')" != 0 ]; then
         >&2 echo "${_R}error${_0}: incorrect value of ${_B}-${opt}${_0}: ${_B}${OPTARG}${_0}"
         exit 1
       fi
