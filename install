@@ -342,6 +342,7 @@ if [ -z "$file" -a -z "$url" ]; then
   arch="$(uname -m | tr '[A-Z]' '[a-z]')"
 
   case "$kernel" in
+    linux-armv8l)    kernel=linux-aarch64;;
     msys_nt-6.*)     kernel=msys_nt-10.0;;
     msys_nt-10.*)    kernel=msys_nt-10.0;;
     mingw32_nt-6.*)  kernel=msys_nt-10.0;;
