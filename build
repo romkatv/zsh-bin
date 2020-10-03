@@ -501,6 +501,10 @@ rm -- bin/zsh-5.8
 
 rsync -a --copy-links --copy-dirlinks -- "$workdir"/ncurses/share/terminfo share/
 
+for dir in share/terminfo/*; do
+  mv -- "$dir" "$dir".zsh-bin
+done
+
 if [ -e "$workdir"/zsh_doc ]; then
   cp -r -- "$workdir"/zsh_doc/share/man share/
   cp -r -- "$workdir"/zsh_doc/share/zsh/5.8/help share/zsh/5.8/

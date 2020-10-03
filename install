@@ -479,16 +479,22 @@ $sudo tar -xzf "$file"
 $sudo ./share/zsh/5.8/scripts/relocate
 
 $sudo ./bin/zsh -fc '
-  setopt extended_glob                        || exit
-  zmodload -F zsh/files b:{zf_mv,zf_rm,zf_ln} || exit
+  setopt extended_glob                                 || exit
+  zmodload -F zsh/files b:{zf_mv,zf_rm,zf_ln,zf_mkdir} || exit
 
-  for pat in "[[:lower:]]" "[^[:lower:]]"; do
-    for hex in ./share/terminfo/[[:xdigit:]][[:xdigit:]](:t); do
+  for pat in "[^[:upper:]]" "[[:upper:]]"; do
+    for hex in ./share/terminfo/[[:xdigit:]][[:xdigit:]].zsh-bin(:t:r); do
       printf -v char "\\x$hex"
-      [[ $char == $~pat ]]          || continue
-      [ -e ./share/terminfo/$char ] && continue
-      zf_ln -s -- "$hex" ./share/terminfo/$char 2>/dev/null   ||
-        cp -r -- ./share/terminfo/$hex ./share/terminfo/$char || exit
+      [[ $char == $~pat ]] || continue
+      [[ -e ./share/terminfo/$hex ]] || zf_mkdir -- ./share/terminfo/$hex || exit
+      cp -- ./share/terminfo/$hex.zsh-bin/* ./share/terminfo/$hex/ || exit
+      [[ $char == [[:upper:]] &&
+         ./share/terminfo/$char -ef ./share/terminfo/${(L)char} ]] && continue
+      [[ -e ./share/terminfo/$char ]] ||
+        zf_ln -s -- $hex ./share/terminfo/$char 2>/dev/null ||
+        zf_mkdir -- ./share/terminfo/$char || exit
+      cp -- ./share/terminfo/$hex.zsh-bin/* ./share/terminfo/$char/ || exit
+      zf_rm -rf -- ./share/terminfo/$hex.zsh-bin || exit
     done
   done
 
