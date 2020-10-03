@@ -48,7 +48,7 @@ else
 fi
 
 usage="$(cat <<END
-Usage: install [OPTIONS] [-t FILE] [-a <sha256|md5>]...
+Usage: install [OPTIONS] [-a <sha256|md5>]...
                [OPTIONS] -f FILE
                [OPTIONS] -u URL
 
@@ -60,7 +60,7 @@ If '-u URL' is specified, download the file and install as if with
 
 If neither '-f' nor '-u' is specified, download the appopriate file
 from https://github.com/romkatv/zsh-bin/releases and install as if
-with '-t FILE'. If '-a <sha256|md5>' is specified at least once,
+with '-f FILE'. If '-a <sha256|md5>' is specified at least once,
 abort installation if integrity of the downloaded package cannot
 be verified with at least one of the listed hashing algorithms.
 
@@ -78,6 +78,12 @@ Options:
     is not specified, the effect is idential to this:
 
       -d /usr/local -d ~/.local -d ""
+
+  -e VALUE
+
+    Whether to add the newly installed Zsh to /etc/shells. This will
+    allow users to designate this instance of Zsh as their login shell.
+    VALUE can be 'yes', 'no' or 'ask' (the default).
 
   -s FD
 
@@ -144,7 +150,7 @@ check_sudo() {
       fi
       break
     fi
-    if [ "$dir" = / -o "$dir" = . ]; then
+    if [ "$dir" = / ] || [ "$dir" = . ]; then
       break
     fi
     dir="$(dirname -- "$dir")"
@@ -160,10 +166,12 @@ url=
 file=
 sudo=
 fd=
+etc_shells=
+asked=
 
 command -v sudo >/dev/null 2>&1 && euid="$(id -u 2>/dev/null)" || euid=0
 
-while getopts ':hqd:s:a:f:u:' opt "$@"; do
+while getopts ':hqd:e:s:a:f:u:' opt "$@"; do
   case "$opt" in
     h)
       printf '%s\n' "$usage"
@@ -193,6 +201,20 @@ while getopts ':hqd:s:a:f:u:' opt "$@"; do
         check_dir "$OPTARG"
       fi
       add_dir "$OPTARG"
+    ;;
+    e)
+      if [ -n "$etc_shells" ]; then
+        >&2 echo "${_R}error${_0} duplicate option: ${_B}-${opt}${_0}"
+        exit 1
+      fi
+      case "$OPTARG" in
+        yes|no|ask);;
+        *)
+          >&2 echo "${_R}error${_0}: incorrect value of ${_B}-${opt}${_0}: ${_B}${OPTARG}${_0}"
+          exit 1
+        ;;
+      esac
+      etc_shells="$OPTARG"
     ;;
     s)
       if [ -n "$fd" ]; then
@@ -310,9 +332,12 @@ else
     if printf "%s" "$dirs" | cut -b 1 | grep -qxF -- "$choice"; then
       break
     fi
-    >&2 echo "Invalid choice: ${_R}$choice${_0}. Try again."
+    if [ -n "$choice" ]; then
+      >&2 echo "Invalid choice: ${_R}$choice${_0}. Try again."
+    fi
     echo
   done
+  asked=1
 fi
 
 dir="$(printf "%s" "$dirs" | sed "${choice}!d" | cut -b 2-)"
@@ -323,7 +348,8 @@ if [ -z "$dir" ]; then
   if [ -z "$quiet" ]; then
     echo
   fi
-elif [ -z "$quiet" -a "$num_dirs" != 1 ]; then
+  asked=1
+elif [ -z "$quiet" ] && [ "$num_dirs" != 1 ]; then
   echo
 fi
 
@@ -506,6 +532,61 @@ $sudo ./bin/zsh -fc '
   done'
 
 cleanup
+
+if [ ! -f /etc/shells ] || grep -qxF "$dir/bin/zsh" /etc/shells 2>/dev/null; then
+  etc_shells=no
+fi
+
+if [ "${etc_shells:-ask}" = ask ]; then
+  if [ -z "$quiet" -o -n "$asked" ]; then
+    echo
+  fi
+  while true; do
+    printf "%s\n" "Add ${_G}$dir/bin/zsh${_0} to ${_U}/etc/shells${_0}?"
+    echo "This will allow you to use ${_G}$dir/bin/zsh${_0}"
+    echo "as a login shell. ${_B}Recommended.${_0}"
+    echo ""
+    printf "Choice [y/n]: "
+    read -r choice
+    case "$choice" in
+      y|Y|yes|Yes|YES|ye|Ye|YE)
+        if [ -z "$quiet" ]; then
+          echo
+        fi
+        etc_shells=yes
+        break
+      ;;
+      n|N|no|No|NO)
+        etc_shells=no
+        break
+      ;;
+    esac
+    if [ -n "$choice" ]; then
+      >&2 echo "Invalid choice: ${_R}$choice${_0}. Try again."
+    fi
+    echo
+  done
+fi
+
+if [ "$etc_shells" = yes ]; then
+  if [ -z "$quiet" ]; then
+    printf "%s\n" "${_Y}===>${_0} adding ${_G}$dir/bin/zsh${_0} to ${_U}/etc/shells${_0}"
+  fi
+  if [ -z "$sudo" ]; then
+    if [ ! -w /etc/shells ]; then
+      if [ "$euid" = 0 ]; then
+        >&2 echo "${_R}error${_0}: file not writable: ${_U}/etc/passwd${_0}"
+        exit 1
+      else
+        if [ -z "$quiet" ]; then
+          echo "${_Y}===>${_0} using ${_U}${_G}sudo${_0} for modifications"
+        fi
+        sudo=sudo
+      fi
+    fi
+  fi
+  printf "%s\n" "$dir/bin/zsh" | "$sudo" tee -a /etc/shells >/dev/null
+fi
 
 if [ -z "$quiet" ]; then
   echo ""
