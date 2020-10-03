@@ -79,11 +79,16 @@ Options:
 
       -d /usr/local -d ~/.local -d ""
 
+    Except for Termux, where it's this:
+
+      -d "\$PREFIX"/local -d ~/.local -d ""
+
   -e VALUE
 
     Whether to add the newly installed Zsh to /etc/shells. This will
     allow users to designate this instance of Zsh as their login shell.
-    VALUE can be 'yes', 'no' or 'ask' (the default).
+    VALUE can be 'yes', 'no' or 'ask' (the default). If /etc/shells
+    does not exist, all values are equivalent to 'no'.
 
   -s FD
 
@@ -287,18 +292,28 @@ if [ -n "$algos" ]; then
 fi
 
 if [ "$num_dirs" = 0 ]; then
-  add_dir /usr/local
+  if [ "$(uname -s 2>/dev/null)" = Linux ] &&
+     [ "$(uname -o 2>/dev/null)" = Android ] &&
+     [ -d "${PREFIX:-/data/data/com.termux/files/usr}" ]; then
+    usr_local="${PREFIX:-/data/data/com.termux/files/usr}"/local
+    usr_local_d="${_U}\$PREFIX/local${_0}"
+  else
+    usr_local=/usr/local
+    usr_local_d="${_U}/usr/local${_0}   "
+  fi
+
+  add_dir "$usr_local"
   add_dir ~/.local
   add_dir ""
 
-  dirs_c="  ${_B}(1)${_0} ${_U}/usr/local${_0}        ${_Y}<=${_0}"
-  if check_sudo /usr/local >/dev/null 2>/dev/null; then
+  dirs_c="  ${_B}(1)${_0} $usr_local_d     ${_Y}<=${_0}"
+  if check_sudo "$usr_local" >/dev/null 2>/dev/null; then
     if [ -n "$sudo" ]; then
       dirs_c="${dirs_c} uses ${_U}${_G}sudo${_0}"
     else
       dirs_c="${dirs_c} does not need ${_U}${_G}sudo${_0}"
     fi
-    if [ -d /usr/local ]; then
+    if [ -d "$usr_local" ]; then
       dirs_c="${dirs_c} (${_B}recommended${_0})"
     fi
   else
