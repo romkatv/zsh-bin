@@ -529,12 +529,13 @@ $sudo ./bin/zsh -fc '
       [[ $char == $~pat ]] || continue
       [[ -e ./share/terminfo/$hex ]] || zf_mkdir -- ./share/terminfo/$hex || exit
       cp -- ./share/terminfo/$hex.zsh-bin/* ./share/terminfo/$hex/ || exit
-      [[ $char == [[:upper:]] &&
-         ./share/terminfo/$char -ef ./share/terminfo/${(L)char} ]] && continue
-      [[ -e ./share/terminfo/$char ]] ||
-        zf_ln -s -- $hex ./share/terminfo/$char 2>/dev/null ||
-        zf_mkdir -- ./share/terminfo/$char || exit
-      cp -- ./share/terminfo/$hex.zsh-bin/* ./share/terminfo/$char/ || exit
+      if [[ $char != [[:upper:]] ||
+            ! ./share/terminfo/$char -ef ./share/terminfo/${(L)char} ]]; then
+        [[ -e ./share/terminfo/$char ]] ||
+          zf_ln -s -- $hex ./share/terminfo/$char 2>/dev/null ||
+          zf_mkdir -- ./share/terminfo/$char || exit
+        cp -- ./share/terminfo/$hex.zsh-bin/* ./share/terminfo/$char/ || exit
+      fi
       zf_rm -rf -- ./share/terminfo/$hex.zsh-bin || exit
     done
   done
