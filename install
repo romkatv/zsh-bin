@@ -79,7 +79,7 @@ Options:
 
       -d /usr/local -d ~/.local -d ""
 
-    Except for Termux, where it's this:
+    Except on Termux:
 
       -d "\$PREFIX"/local -d ~/.local -d ""
 
