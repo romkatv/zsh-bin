@@ -601,7 +601,7 @@ if [ "$etc_shells" = yes ]; then
       fi
     fi
   fi
-  printf "%s\n" "$dir/bin/zsh" | "$sudo" tee -a /etc/shells >/dev/null
+  printf "%s\n" "$dir/bin/zsh" | $sudo tee -a /etc/shells >/dev/null
 fi
 
 if [ -z "$quiet" ]; then
