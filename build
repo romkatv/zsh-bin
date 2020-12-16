@@ -180,7 +180,7 @@ case "$ZSH_BIN_KERNEL" in
       exit 1
     fi
     for formula in autoconf libiconv pcre wget; do
-      if brew list "$formula" &>/dev/null; then
+      if brew ls --version "$formula" >/dev/null; then
         brew upgrade "$formula"
       else
         brew install "$formula"
