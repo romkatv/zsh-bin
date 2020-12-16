@@ -58,7 +58,7 @@ if [ -t 0 -a -t 1 ]; then
       [ "$n" -eq 0 ] || break
     done
     stty "$saved_tty_settings"
-    echo
+    [ "$choice" = "$lf" ] || echo
   }
   cleanup1() {
     trap - INT TERM EXIT
@@ -151,9 +151,9 @@ add_dir() {
   num_dirs=$((num_dirs + 1))
   dirs="$dirs${num_dirs}${1}${lf}"
   if [ -n "$1" ]; then
-    dirs_c="$dirs_c  ${_B}($num_dirs)${_0} ${_U}${1}${_0}${lf}"
+    dirs_c="$dirs_c  ${_B}($num_dirs)${_0}  ${_U}${1}${_0}${lf}"
   else
-    dirs_c="$dirs_c  ${_B}($num_dirs)${_0} custom directory (input required)${lf}"
+    dirs_c="$dirs_c  ${_B}($num_dirs)${_0}  Custom directory.${lf}"
   fi
 }
 
@@ -330,7 +330,7 @@ if [ "$num_dirs" = 0 ]; then
   add_dir ~/.local
   add_dir ""
 
-  dirs_c="  ${_B}(1)${_0} $usr_local_d     ${_Y}<=${_0}"
+  dirs_c="  ${_B}(1)${_0}  $usr_local_d     ${_Y}<=${_0}"
   if check_sudo "$usr_local" >/dev/null 2>/dev/null; then
     if [ -n "$sudo" ]; then
       dirs_c="${dirs_c} uses ${_U}${_G}sudo${_0}"
@@ -344,7 +344,7 @@ if [ "$num_dirs" = 0 ]; then
     dirs_c="${dirs_c} ${_R}not writable${_0}"
   fi
 
-  dirs_c="${dirs_c}${lf}  ${_B}(2)${_0} ${_U}~/.local${_0}          ${_Y}<=${_0}"
+  dirs_c="${dirs_c}${lf}  ${_B}(2)${_0}  ${_U}~/.local${_0}          ${_Y}<=${_0}"
   if check_sudo ~/.local >/dev/null 2>/dev/null; then
     if [ -n "$sudo" ]; then
       dirs_c="${dirs_c} uses ${_U}${_G}sudo${_0}"
@@ -355,30 +355,29 @@ if [ "$num_dirs" = 0 ]; then
     dirs_c="${dirs_c} ${_R}not writable${_0}"
   fi
 
-  dirs_c="${dirs_c}${lf}  ${_B}(3)${_0} custom directory  ${_Y}<=${_0} manual input required${lf}"
+  dirs_c="${dirs_c}${lf}  ${_B}(3)${_0}  Custom directory.${lf}"
 fi
 
 if [ "$num_dirs" = 1 ]; then
   choice=1
 else
+  echo "Choose installation directory for ${_G}Zsh 5.8${_0}:"
+  echo ""
+  printf "%s" "$dirs_c"
+  printf '  \033[1m(q)\033[0m  Quit and do nothing.\n'
+  echo ""
   while true; do
-    echo "Choose installation directory for ${_G}Zsh 5.8${_0}:"
-    echo ""
-    printf "%s" "$dirs_c"
-    printf '  \033[1m(q)\033[0m quit and do nothing\n'
-    echo ""
     printf "Choice [%sq]: " "$(printf "%s" "$dirs" | cut -b 1 | tr -d '\n')"
     read_choice
     if printf "%s" "$dirs" | cut -b 1 | grep -qxF -- "$choice"; then
       break
     fi
-    if [ "$choice" = q ]; then
+    if [ "$choice" = q ] || [ "$choice" = Q ]; then
       exit 1
     fi
-    if [ -n "$choice" ]; then
-      >&2 echo "Invalid choice: ${_R}$choice${_0}. Try again."
+    if [ "$choice" != "$lf" ]; then
+      >&2 echo "Invalid choice: ${_R}$choice${_0}"
     fi
-    echo
   done
   asked=1
 fi
@@ -581,30 +580,36 @@ if [ "${etc_shells:-ask}" = ask ]; then
   if [ -z "$quiet" -o -n "$asked" ]; then
     echo
   fi
+  printf "%s\n" "Add ${_G}$dir/bin/zsh${_0} to ${_U}/etc/shells${_0}?"
+  echo
+  echo "This will allow you to use it as a login shell."
+  echo ""
+  echo "  ${_B}(y)${_0}  Yes. ${_B}Recommended.${_0}"
+  echo "  ${_B}(n)${_0}  No."
+  echo "  ${_B}(q)${_0}  Quit and do nothing."
+  echo ""
   while true; do
-    printf "%s\n" "Add ${_G}$dir/bin/zsh${_0} to ${_U}/etc/shells${_0}?"
-    echo "This will allow you to use ${_G}$dir/bin/zsh${_0}"
-    echo "as a login shell. ${_B}Recommended.${_0}"
-    echo ""
-    printf "Choice [yn]: "
+    printf "Choice [ynq]: "
     read_choice
     case "$choice" in
-      y|Y|yes|Yes|YES|ye|Ye|YE)
+      y|Y)
         if [ -z "$quiet" ]; then
           echo
         fi
         etc_shells=yes
         break
       ;;
-      n|N|no|No|NO)
+      n|N)
         etc_shells=no
         break
       ;;
+      q|Q)
+        exit 1
+      ;;
     esac
-    if [ -n "$choice" ]; then
-      >&2 echo "Invalid choice: ${_R}$choice${_0}. Try again."
+    if [ "$choice" != "$lf" ]; then
+      >&2 echo "Invalid choice: ${_R}$choice${_0}"
     fi
-    echo
   done
 fi
 
