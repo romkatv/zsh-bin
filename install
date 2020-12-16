@@ -47,6 +47,31 @@ else
   readonly _Y=
 fi
 
+if [ -t 0 -a -t 1 ]; then
+  read_choice() {
+    choice=''
+    stty -icanon min 1 time 0
+    while :; do
+      c="$(dd bs=1 count=1 2>/dev/null && echo x)"
+      choice="$choice${c%x}"
+      n="$(printf '%s' "$choice" | wc -m)"
+      [ "$n" -eq 0 ] || break
+    done
+    stty "$saved_tty_settings"
+    echo
+  }
+  cleanup1() {
+    echo cleanup
+    trap - INT TERM EXIT
+    stty "$saved_tty_settings"
+  }
+  saved_tty_settings="$(stty -g)"
+  trap cleanup1 INT TERM EXIT
+else
+  read_choice() { IFS= read -r choice; }
+  cleanup1() { :; }
+fi
+
 usage="$(cat <<END
 Usage: install [OPTIONS] [-a <sha256|md5>]...
                [OPTIONS] -f FILE
@@ -342,8 +367,8 @@ else
     echo ""
     printf "%s" "$dirs_c"
     echo ""
-    printf "Choice: "
-    read -r choice
+    printf "Choice [%s]: " "$(printf "%s" "$dirs" | cut -b 1 | tr -d '\n')"
+    read_choice
     if printf "%s" "$dirs" | cut -b 1 | grep -qxF -- "$choice"; then
       break
     fi
@@ -411,8 +436,8 @@ fi
 
 if [ -n "$url" ]; then
   file="${TMPDIR:-/tmp}"/zsh-bin.tmp.$$.tar.gz
-  cleanup() { rm -f -- "$file"; }
-  trap cleanup INT QUIT TERM EXIT ILL PIPE
+  cleanup2() { cleanup1; rm -f -- "$file"; }
+  trap cleanup2 INT TERM EXIT
 
   if [ -z "$quiet" ]; then
     echo "${_Y}===>${_0} fetching ${_U}${url##*/}${_0}"
@@ -439,8 +464,6 @@ if [ -n "$url" ]; then
       exit 1
     fi
   )
-else
-  cleanup() { true; }
 fi
 
 if [ "$check_sig" = 1 ]; then
@@ -547,8 +570,6 @@ $sudo ./bin/zsh -fc '
     zf_mv -f -- $tmp $file.zwc || exit
   done'
 
-cleanup
-
 if [ ! -f /etc/shells ] || grep -qxF "$dir/bin/zsh" /etc/shells 2>/dev/null; then
   etc_shells=no
 fi
@@ -562,8 +583,8 @@ if [ "${etc_shells:-ask}" = ask ]; then
     echo "This will allow you to use ${_G}$dir/bin/zsh${_0}"
     echo "as a login shell. ${_B}Recommended.${_0}"
     echo ""
-    printf "Choice [y/n]: "
-    read -r choice
+    printf "Choice [yn]: "
+    read_choice
     case "$choice" in
       y|Y|yes|Yes|YES|ye|Ye|YE)
         if [ -z "$quiet" ]; then
