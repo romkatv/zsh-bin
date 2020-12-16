@@ -367,7 +367,7 @@ else
   printf '  \033[1m(q)\033[0m  Quit and do nothing.\n'
   echo ""
   while true; do
-    printf "Choice [%sq]: " "$(printf "%s" "$dirs" | cut -b 1 | tr -d '\n')"
+    printf "%sChoice [%sq]:%s " "$_B" "$(printf "%s" "$dirs" | cut -b 1 | tr -d '\n')" "$_0"
     read_choice
     if printf "%s" "$dirs" | cut -b 1 | grep -qxF -- "$choice"; then
       break
@@ -375,7 +375,7 @@ else
     if [ "$choice" = q ] || [ "$choice" = Q ]; then
       exit 1
     fi
-    if [ "$choice" != "$lf" ]; then
+    if [ -n "$choice" -a "$choice" != "$lf" ]; then
       >&2 echo "Invalid choice: ${_R}$choice${_0}"
     fi
   done
@@ -384,8 +384,11 @@ fi
 
 dir="$(printf "%s" "$dirs" | sed "${choice}!d" | cut -b 2-)"
 if [ -z "$dir" ]; then
-  printf "Custom directory: "
-  read -r dir
+  while :; do
+    echo -n "${_B}Custom directory:${_0} "
+    read -r dir
+    [ -z "$dir" ] || break
+  done
   check_dir "$dir"
   if [ -z "$quiet" ]; then
     echo
@@ -589,7 +592,7 @@ if [ "${etc_shells:-ask}" = ask ]; then
   echo "  ${_B}(q)${_0}  Quit and do nothing."
   echo ""
   while true; do
-    printf "Choice [ynq]: "
+    echo -n "${_B}Choice [ynq]:${_0} "
     read_choice
     case "$choice" in
       y|Y)
@@ -607,7 +610,7 @@ if [ "${etc_shells:-ask}" = ask ]; then
         exit 1
       ;;
     esac
-    if [ "$choice" != "$lf" ]; then
+    if [ -n "$choice" -a "$choice" != "$lf" ]; then
       >&2 echo "Invalid choice: ${_R}$choice${_0}"
     fi
   done
