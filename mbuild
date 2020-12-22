@@ -110,6 +110,7 @@ local -rA assets=(
   cygwin_nt-10.0-x86_64  build-windows-x86_64
   msys_nt-10.0-i686      build-windows-x86_64
   msys_nt-10.0-x86_64    build-windows-x86_64
+  darwin-arm64           build-macos-arm64
   darwin-x86_64          build-macos-x86_64
   freebsd-amd64          build-freebsd-amd64
   linux-aarch64          build-linux-aarch64
@@ -183,7 +184,8 @@ local build='
 function build-unix() {
   local intro
   case $2 in
-    darwin-*) intro='PATH="/usr/local/bin:$PATH"';;
+    darwin-arm64) intro='PATH="/opt/local/bin:$PATH"';;
+    darwin-*)     intro='PATH="/usr/local/bin:$PATH"';;
   esac
   ssh $1 -- /bin/sh -uex <<<"
     $intro
