@@ -16,6 +16,7 @@ readonly url_base=https://github.com/romkatv/zsh-bin/releases/download/v5.0.1
 readonly archives='
 file:zsh-5.8-cygwin_nt-10.0-i686.tar.gz;   md5:1ae8a1e4a17da7127fa97e2269fc71e5; sha256:056557f69d7c98074b377d28f5c821157740f964c6c6278a9ef5ba49b470b173;
 file:zsh-5.8-cygwin_nt-10.0-x86_64.tar.gz; md5:4a4119c6cfd6fced910db6877c1635bd; sha256:9308fcf6519ca5118820c0b8b7a17f605c299275adb056652c04d387f95bffcb;
+file:zsh-5.8-darwin-arm64.tar.gz;          md5:20936840669892b2fd82e0971a4e629b; sha256:d0247b9d3085a8a2928271304a60b87f8536d3d555d2f2c346fd041b1a16bd09;
 file:zsh-5.8-darwin-x86_64.tar.gz;         md5:6a1f186af0f67e973a2f4e1df86d68ba; sha256:b3dfb389eeb6b87c4c6c5b23d52f31caa77bf7a2bf39f6148b3bb845ad486322;
 file:zsh-5.8-freebsd-amd64.tar.gz;         md5:d2408b698b853ea34e5006550df9f0a5; sha256:1b078b98a22c069018f917dac2bff64bb91af1ee74c4479934f217cce1dfecd5;
 file:zsh-5.8-linux-aarch64.tar.gz;         md5:e691e066603dec8ad10959d753b26d11; sha256:e95999f422f53878a3f0996b8673b2b367e54ce74fdf8db14a063e951c501722;
