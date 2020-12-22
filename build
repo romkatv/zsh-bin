@@ -42,6 +42,8 @@ END
 build="$(cat <<\END
 outdir="$(pwd)"
 
+unset TERMINFO TERMINFO_DIRS
+
 if command -v mktemp >/dev/null 2>&1; then
   workdir="$(mktemp -d "${TMPDIR:-/tmp}"/zsh-bin.XXXXXXXXXX)"
 else
@@ -175,17 +177,20 @@ case "$ZSH_BIN_KERNEL" in
       >&2 echo "[error] please run 'xcode-select --install' and retry"
       exit 1
     fi
-    if ! command -v brew >/dev/null 2>&1; then
-      >&2 echo "[error] please install homebrew from https://brew.sh/ and retry"
+    if command -v port >/dev/null 2>&1; then
+      sudo port -N install autoconf libiconv pcre wget
+    elif command -v brew >/dev/null 2>&1; then
+      for formula in autoconf libiconv pcre wget; do
+        if brew ls --version "$formula" >/dev/null; then
+          brew upgrade "$formula"
+        else
+          brew install "$formula"
+        fi
+      done
+    else
+      >&2 echo "[error] please install MacPorts or Homebrew and retry"
       exit 1
     fi
-    for formula in autoconf libiconv pcre wget; do
-      if brew ls --version "$formula" >/dev/null; then
-        brew upgrade "$formula"
-      else
-        brew install "$formula"
-      fi
-    done
     mkdir -- "$workdir"/zsh_doc
     cd -- "$workdir"/zsh_doc
     fetch "$zsh_doc_url" "$zsh_doc_sha256"
@@ -318,6 +323,179 @@ cd -- "$workdir"
 fetch "$zsh_url" "$zsh_sha256"
 cd zsh-zsh-5.8
 
+patch -u aczsh.m4 <<-\END
+	--- aczsh.m4	2020-12-21 19:06:04.847363893 +0100
+	+++ aczsh.m4.new	2020-12-21 19:05:51.975418771 +0100
+	@@ -118,6 +118,7 @@
+	 AC_TRY_COMMAND($CC -c $CFLAGS $CPPFLAGS $DLCFLAGS conftest2.c 1>&AC_FD_CC) &&
+	 AC_TRY_COMMAND($DLLD -o conftest2.$DL_EXT $LDFLAGS $DLLDFLAGS conftest2.o $LIBS 1>&AC_FD_CC); then
+	     AC_TRY_RUN([
+	+#include <stdlib.h>
+	 #ifdef HPUX10DYNAMIC
+	 #include <dl.h>
+	 #define RTLD_LAZY BIND_DEFERRED
+	@@ -199,6 +200,7 @@
+	 AC_TRY_COMMAND($CC -c $CFLAGS $CPPFLAGS $DLCFLAGS conftest2.c 1>&AC_FD_CC) &&
+	 AC_TRY_COMMAND($DLLD -o conftest2.$DL_EXT $LDFLAGS $DLLDFLAGS conftest2.o $LIBS 1>&AC_FD_CC); then
+	     AC_TRY_RUN([
+	+#include <stdlib.h>
+	 #ifdef HPUX10DYNAMIC
+	 #include <dl.h>
+	 #define RTLD_LAZY BIND_DEFERRED
+	@@ -274,6 +276,7 @@
+	 AC_TRY_COMMAND($CC -c $CFLAGS $CPPFLAGS $DLCFLAGS conftest2.c 1>&AC_FD_CC) &&
+	 AC_TRY_COMMAND($DLLD -o conftest2.$DL_EXT $LDFLAGS $DLLDFLAGS conftest2.o $LIBS 1>&AC_FD_CC); then
+	     AC_TRY_RUN([
+	+#include <stdlib.h>
+	 #ifdef HPUX10DYNAMIC
+	 #include <dl.h>
+	 #define RTLD_LAZY BIND_DEFERRED
+	@@ -343,6 +346,7 @@
+	     save_ldflags=$LDFLAGS
+	     LDFLAGS="$LDFLAGS $EXTRA_LDFLAGS"
+	     AC_TRY_RUN([
+	+#include <stdlib.h>
+	 #ifdef HPUX10DYNAMIC
+	 #include <dl.h>
+	 #define RTLD_LAZY BIND_DEFERRED
+	@@ -416,6 +420,7 @@
+	     save_ldflags=$LDFLAGS
+	     LDFLAGS="$LDFLAGS $EXTRA_LDFLAGS -s"
+	     AC_TRY_RUN([
+	+#include <stdlib.h>
+	 #ifdef HPUX10DYNAMIC
+	 #include <dl.h>
+	 #define RTLD_LAZY BIND_DEFERRED
+	@@ -483,6 +488,7 @@
+	 if AC_TRY_COMMAND($CC -c $CFLAGS $CPPFLAGS $DLCFLAGS conftest1.c 1>&AC_FD_CC) &&
+	 AC_TRY_COMMAND($DLLD -o conftest1.$DL_EXT $LDFLAGS $DLLDFLAGS -s conftest1.o $LIBS 1>&AC_FD_CC); then
+	     AC_TRY_RUN([
+	+#include <stdlib.h>
+	 #ifdef HPUX10DYNAMIC
+	 #include <dl.h>
+	 #define RTLD_LAZY BIND_DEFERRED
+	END
+
+patch -u configure.ac <<-\END
+	--- configure.ac	2020-12-21 19:06:04.851363875 +0100
+	+++ configure.ac.new	2020-12-21 19:05:59.199387974 +0100
+	@@ -1394,6 +1394,10 @@
+	 AC_CACHE_CHECK(if tgetent accepts NULL,
+	 zsh_cv_func_tgetent_accepts_null,
+	 [AC_RUN_IFELSE([AC_LANG_SOURCE([[
+	+#include <fcntl.h>
+	+#include <stdlib.h>
+	+int tgetent(char *, char *);
+	+char *tgetstr(char *, char **);
+	 main()
+	 {
+	     char buf[4096];
+	@@ -1418,6 +1422,10 @@
+	 AC_CACHE_CHECK(if tgetent returns 0 on success,
+	 zsh_cv_func_tgetent_zero_success,
+	 [AC_RUN_IFELSE([AC_LANG_SOURCE([[
+	+#include <fcntl.h>
+	+#include <stdlib.h>
+	+int tgetent(char *, char*);
+	+char *tgetstr(char *, char **);
+	 main()
+	 {
+	     char buf[4096];
+	@@ -1855,6 +1863,7 @@
+	 #include <sys/time.h>
+	 #endif
+	 #include <sys/resource.h>
+	+#include <stdlib.h>
+	 main(){struct rlimit r;exit(sizeof(r.rlim_cur) <= sizeof(long));}]])],[zsh_cv_rlim_t_is_longer=yes],[zsh_cv_rlim_t_is_longer=no],[zsh_cv_rlim_t_is_longer=yes])])
+	 if test x$zsh_cv_rlim_t_is_longer = xyes; then
+	   AC_CACHE_CHECK(if rlim_t is a quad,
+	@@ -1865,6 +1874,7 @@
+	 #endif
+	 #include <stdio.h>
+	 #include <sys/resource.h>
+	+#include <stdlib.h>
+	 main() { 
+	   struct rlimit r;
+	   char buf[20];
+	@@ -1887,6 +1897,7 @@
+	 #include <sys/time.h>
+	 #endif
+	 #include <sys/resource.h>
+	+#include <stdlib.h>
+	   main(){struct rlimit r;r.rlim_cur=-1;exit(r.rlim_cur<0);}]])],[zsh_cv_type_rlim_t_is_unsigned=yes],[zsh_cv_type_rlim_t_is_unsigned=no],[zsh_cv_type_rlim_t_is_unsigned=no])])
+	   if test x$zsh_cv_type_rlim_t_is_unsigned = xyes; then
+	     AC_DEFINE(RLIM_T_IS_UNSIGNED)
+	@@ -2258,6 +2269,9 @@
+	 [AC_RUN_IFELSE([AC_LANG_SOURCE([[
+	 #include <fcntl.h>
+	 #include <signal.h>
+	+#include <unistd.h>
+	+#include <stdlib.h>
+	+#include <sys/stat.h>
+	 main()
+	 {
+	     char c;
+	@@ -2299,6 +2313,7 @@
+	 [AC_RUN_IFELSE([AC_LANG_SOURCE([[
+	 #include <unistd.h>
+	 #include <fcntl.h>
+	+#include <stdlib.h>
+	 main()
+	 {
+	     int ret;
+	@@ -2331,6 +2346,7 @@
+	 #include <unistd.h>
+	 #include <signal.h>
+	 #include <errno.h>
+	+#include <stdlib.h>
+	 main()
+	 {
+	     int pid = (getpid() + 10000) & 0xffffff;
+	@@ -2356,6 +2372,7 @@
+	     [AC_RUN_IFELSE([AC_LANG_SOURCE([[
+	 #include <signal.h>
+	 #include <unistd.h>
+	+#include <stdlib.h>
+	 int child=0;
+	 void handler(sig)
+	     int sig;
+	@@ -2407,6 +2424,7 @@
+	 #include <sys/types.h>
+	 #include <unistd.h>
+	 #include <fcntl.h>
+	+#include <stdlib.h>
+	 main() {
+	     int fd;
+	     int ret;
+	@@ -2450,6 +2468,10 @@
+	     zsh_cv_sys_getpwnam_faked,
+	     [AC_RUN_IFELSE([AC_LANG_SOURCE([[
+	 #include <pwd.h>
+	+#include <stdio.h>
+	+#include <string.h>
+	+#include <stdlib.h>
+	+#include <unistd.h>
+	 main() {
+	     struct passwd *pw1, *pw2;
+	     char buf[1024], name[1024];
+	@@ -2777,6 +2799,7 @@
+	    [AC_RUN_IFELSE([AC_LANG_SOURCE([[/* Test for whether ELF binaries are produced */
+	 #include <fcntl.h>
+	 #include <stdlib.h>
+	+#include <unistd.h>
+	 main(argc, argv)
+	 int argc;
+	 char *argv[];
+	@@ -2930,6 +2953,7 @@
+	     AC_TRY_COMMAND($DLLD $LDFLAGS $DLLDFLAGS -o conftest.$DL_EXT conftest.o 1>&AS_MESSAGE_LOG_FD) &&
+	     AC_RUN_IFELSE([AC_LANG_SOURCE([[
+	 #include <stdio.h>
+	+#include <stdlib.h>
+	 #ifdef HPUX10DYNAMIC
+	 #include <dl.h>
+	 #define RTLD_LAZY BIND_DEFERRED
+	END
+
 case "$ZSH_BIN_CPU" in
   powerpc64le) archflag="-mcpu";;
   *)           archflag="-march";;
@@ -339,11 +517,18 @@ case "$ZSH_BIN_KERNEL" in
     LIBS="$LIBS -lpcre"
   ;;
   darwin)
-    opt=/usr/local/opt
     mkdir -- "$workdir"/lib
-    ln -s -- "$opt"/libiconv/lib/libiconv.a   "$workdir"/lib
-    ln -s -- "$opt"/pcre/lib/libpcre.a        "$workdir"/lib
-    CFLAGS="$CFLAGS -I$opt/libiconv/include -I$opt/pcre/include"
+    if [ -e /opt/local/lib/libiconv.a -a -e /opt/local/lib/libpcre.a ]; then
+      ln -s -- /opt/local/lib/libiconv.a "$workdir"/lib
+      ln -s -- /opt/local/lib/libpcre.a  "$workdir"/lib
+      CFLAGS="$CFLAGS -I/opt/local/include -I/opt/local/include"
+    else
+      brew_prefix="$(command brew --prefix)"
+      opt="$brew_prefix"/opt
+      ln -s -- "$opt"/libiconv/lib/libiconv.a   "$workdir"/lib
+      ln -s -- "$opt"/pcre/lib/libpcre.a        "$workdir"/lib
+      CFLAGS="$CFLAGS -I$opt/libiconv/include -I$opt/pcre/include"
+    fi
     LDFLAGS="$LDFLAGS -L$workdir/lib"
     LIBS="$LIBS -lpcre"
   ;;
@@ -358,6 +543,19 @@ esac
 
 export DLLDFLAGS="-shared"
 export LDFLAGS="$CFLAGS $LDFLAGS"
+
+sed_i() {
+  [ $# -gt 1 ]
+  local script="$1"
+  while [ $# != 1 ]; do
+    shift
+    local file="$1"
+    sed "$script" "$file" >"$file".tmp
+    mv -- "$file".tmp "$file"
+  done
+}
+
+sed_i 's/armv\*/armv* | arm64/' config.sub
 
 host="$(./config.guess)"
 if [ -z "$host" -o -n "${host##*?-?*}" ]; then
@@ -382,17 +580,6 @@ fi
   --disable-dynamic                  \
   --host="$ZSH_BIN_ARCH-${host#*-}"  \
   --enable-custom-patchlevel=zsh-5.8-0-g77d203f
-
-sed_i() {
-  [ $# -gt 1 ]
-  local script="$1"
-  while [ $# != 1 ]; do
-    shift
-    local file="$1"
-    sed "$script" "$file" >"$file".tmp
-    mv -- "$file".tmp "$file"
-  done
-}
 
 sed_i 's/link=no/link=static/' config.modules
 
@@ -426,6 +613,33 @@ sed_i 's|mv -f zshpaths.h.tmp zshpaths.h|cp -f ../zshpaths.h ./|' Src/zsh.mdd
 sed_i 's/\(\$(LN_S).*\);/( cd -- $(DESTDIR)$(runhelpdir) \&\& \1; );/' Doc/Makefile.in
 
 sed_i 's/tgetent/tgetent_with_env/g' Src/init.c
+
+patch -u Src/init.c <<-\END
+	--- Src/init.c	2020-12-22 14:41:00.524162742 +0100
+	+++ Src/init.c.new	2020-12-22 14:49:40.535136789 +0100
+	@@ -869,6 +869,10 @@
+	     return 1;
+	 }
+	 
+	+#if defined(__APPLE__)
+	+static void init_paths_from_exe_path(void);
+	+#endif
+	+
+	 /* Initialize lots of global variables and hash tables */
+	 
+	 /**/
+	@@ -905,6 +909,10 @@
+	 #endif
+	     int close_fds[10], tmppipe[2];
+	 
+	+#if defined(__APPLE__)
+	+  init_paths_from_exe_path();
+	+#endif
+	+
+	     /*
+	      * Workaround a problem with NIS (in one guise or another) which
+	      * grabs file descriptors and keeps them for future reference.
+	END
 
 cat >>Src/init.c <<-\END
 	volatile char tagged_script_dir[sizeof(SCRIPT_DIR_TAG) + 4096] = {
@@ -469,6 +683,41 @@ cat >>Src/init.c <<-\END
 	  zsfree(patched);
 	  return res;
 	}
+
+	#if defined(__APPLE__)
+	#include <errno.h>
+	#include <stdio.h>
+	#include <stdlib.h>
+	#include <string.h>
+	#include <libproc.h>
+	#include <unistd.h>
+
+	static void init_paths_from_exe_path(void) {
+	  int n, i;
+	  pid_t pid;
+	  char exepath[PROC_PIDPATHINFO_MAXSIZE];
+
+	  pid = getpid();
+	  if (proc_pidpath(pid, exepath, sizeof(exepath)) < 0) {
+	    perror("proc_pidpath");
+	    exit(1);
+	  }
+	  n = strlen(exepath);
+	  for (i = 0; i != 2; --n) {
+	    if (n == 0) {
+	      fprintf(stderr, "zsh: invalid exe path: %s\n", exepath);
+	      exit(1);
+	    }
+	    if (exepath[n-1] == '/') ++i;
+	  }
+	  memcpy((char*)tagged_script_dir   + strlen(SCRIPT_DIR_TAG),   exepath, n);
+	  memcpy((char*)tagged_fpath_dir    + strlen(FPATH_DIR_TAG),    exepath, n);
+	  memcpy((char*)tagged_terminfo_dir + strlen(TERMINFO_DIR_TAG), exepath, n);
+	  strcpy((char*)tagged_script_dir   + strlen(SCRIPT_DIR_TAG)   + n, "/share/zsh/5.8/scripts");
+	  strcpy((char*)tagged_fpath_dir    + strlen(FPATH_DIR_TAG)    + n, "/share/zsh/5.8/functions");
+	  strcpy((char*)tagged_terminfo_dir + strlen(TERMINFO_DIR_TAG) + n, "/share/terminfo");
+	}
+	#endif
 	END
 
 cat >zshpaths.h <<-\END
@@ -534,6 +783,7 @@ cat >share/zsh/5.8/scripts/relocate <<-\END
 	fpath_pos=@ZSH_BIN_FPATH_POS@
 	script_pos=@ZSH_BIN_SCRIPT_POS@
 	terminfo_pos=@ZSH_BIN_TERMINFO_POS@
+	do_patch_bin=@ZSH_BIN_DO_PATCH_BIN@
 
 	usage="$(cat <<-\USAGE
 		Usage: relocate [-s SRC] [-d DST]
@@ -673,6 +923,7 @@ cat >share/zsh/5.8/scripts/relocate <<-\END
 	}
 
 	patch_bin() {
+	  "$do_patch_bin" || return 0
 	  local header_len=$((1 + ${#magic} + 1 + ${#2} + 1))
 	  local header
 	  if ! header="$(dd if="$zsh" bs=1 skip="$1" count="$header_len" 2>/dev/null)"; then
@@ -704,10 +955,12 @@ cat >share/zsh/5.8/scripts/relocate <<-\END
 	patch_bin "$script_pos"   script   share/zsh/5.8/scripts
 	patch_bin "$terminfo_pos" terminfo share/terminfo
 
-	if ! fpath="$("$zsh".tmp -c 'print -r -- $fpath[1]')" ||
-	   [ "${fpath#$dst}" = "$fpath" ]; then
-	  >&2 echo "[error] failed to relocate zsh"
-	  exit 1
+	if "$do_patch_bin"; then
+	  if ! fpath="$("$zsh".tmp -c 'print -r -- $fpath[1]')" ||
+	     [ "${fpath#$dst}" = "$fpath" ]; then
+	    >&2 echo "[error] failed to relocate zsh"
+	    exit 1
+	  fi
 	fi
 
 	mv -f -- "$zsh".tmp "$zsh"
@@ -716,6 +969,12 @@ cat >share/zsh/5.8/scripts/relocate <<-\END
 	END
 
 sed_i "s/@ZSH_BIN_MAGIC@/$magic/g" share/zsh/5.8/scripts/relocate
+
+if [ "$ZSH_BIN_KERNEL" = darwin ]; then
+  sed_i 's/@ZSH_BIN_DO_PATCH_BIN@/false/g' share/zsh/5.8/scripts/relocate
+else
+  sed_i 's/@ZSH_BIN_DO_PATCH_BIN@/true/g'  share/zsh/5.8/scripts/relocate
+fi
 
 embed_pos() {
   local cmd='
@@ -842,6 +1101,7 @@ if [ -z "$ZSH_BIN_CPU" ]; then
   case "$ZSH_BIN_ARCH" in
     armv6l)         ZSH_BIN_CPU=armv6;;
     armv7l)         ZSH_BIN_CPU=armv7;;
+    arm64)          ZSH_BIN_CPU=armv8;;
     aarch64)        ZSH_BIN_CPU=armv8-a;;
     ppc64le)        ZSH_BIN_CPU=powerpc64le;;
     x86_64|amd64)   ZSH_BIN_CPU=x86-64;;
