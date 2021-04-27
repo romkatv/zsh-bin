@@ -1,0 +1,51 @@
+#!/usr/bin/env zsh
+#
+# Lazy man's release script when the only thing that needs to be
+# changed compared to the previous release is to add one or more
+# terminfo entries.
+
+emulate -L zsh -o err_return -o no_unset -o xtrace
+
+local orig_version=5.0.1
+local platforms=(
+  cygwin_nt-10.0-i686
+  cygwin_nt-10.0-x86_64
+  darwin-arm64
+  darwin-x86_64
+  freebsd-amd64
+  linux-aarch64
+  linux-armv6l
+  linux-armv7l
+  linux-i386
+  linux-i586
+  linux-i686
+  linux-x86_64
+  msys_nt-10.0-i686
+  msys_nt-10.0-x86_64)
+local terminfos=(~/.terminfo/66/foot ~/.terminfo/66/foot+base ~/.terminfo/66/foot-direct)
+
+local out_dir=${ZSH_SCRIPT:h:A}/archives
+mkdir -p -- $out_dir
+
+local platform
+for platform in $platforms; do
+  local archive=zsh-5.8-$platform.tar.gz
+  local tmp_dir=
+  {
+    tmp_dir=$(mktemp -d)
+    cd -- $tmp_dir
+    curl -fsSLO https://github.com/romkatv/zsh-bin/releases/download/v${orig_version}/${archive}
+    tar -xzf $archive
+    rm -- $archive
+    local ti
+    for ti in $terminfos; do
+      cp -- $ti share/terminfo/${ti:h:t}.zsh-bin/
+    done
+    rm -f -- $out_dir/$archive
+    tar --owner=0 --group=0 -I 'gzip -9' -cf $out_dir/$archive -- *
+    gpg --armor --detach-sign $out_dir/$archive
+  } always {
+    cd /
+    rm -rf -- "$tmp_dir"
+  }
+done
