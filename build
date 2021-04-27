@@ -78,12 +78,14 @@ ncurses_version=6.2
 kitty_version=0.17.4
 termite_version=15
 kakoune_version=2020.09.01
+foot_version=1.7
 zsh_doc_version=5.0.1
 
 ncurses_url=https://ftp.gnu.org/pub/gnu/ncurses/ncurses-$ncurses_version.tar.gz
 kitty_url=https://raw.githubusercontent.com/kovidgoyal/kitty/v$kitty_version/terminfo/kitty.terminfo
 termite_url=https://raw.githubusercontent.com/thestinger/termite/v$termite_version/termite.terminfo
 kakoune_url=https://raw.githubusercontent.com/mawww/kakoune/v$kakoune_version/contrib/tmux-256color.terminfo
+foot_url=https://codeberg.org/dnkl/foot/raw/branch/releases/$foot_version/foot.info
 libiconv_url=https://ftp.gnu.org/pub/gnu/libiconv/libiconv-$libiconv_version.tar.gz
 icmake_url=https://gitlab.com/fbb-git/icmake/-/archive/$icmake_version/icmake-$icmake_version.tar.gz
 yodl_url=https://gitlab.com/fbb-git/yodl/-/archive/$yodl_version/yodl-$yodl_version.tar.gz
@@ -94,6 +96,7 @@ ncurses_sha256=30306e0c76e0f9f1f0de987cf1c82a5c21e1ce6568b9227f7da5b71cbea86c9d
 kitty_sha256=26c89a6d915864eb1dec8f59e4aadffda85ab8bfd6074a0a25812d864b3c9a2c
 termite_sha256=771ecbde374ccefc40f06fb8ee0191bac1a81ab1f8f46b88288d1a9092770529
 kakoune_sha256=b1a0c61f6ce3d123878c501c01183aac5cf951ed718eb1c73949eb86b00678be
+foot_sha256=59769813ed6545c8176af291f49e281860ac70c30ceb5f72f307ec7ce9c992f4
 libiconv_sha256=e6a1b1b589654277ee790cce3734f07876ac4ccfaecbee8afa0b649cf529cc04
 icmake_sha256=7c5c091f58f576da580238c5e3636e2038d9ecf5efb6562ae7e402910d9036e6
 yodl_sha256=0118efd6f05ddeed4910bb5e280a37a4d8e5c2f42fb2009c840b3d5c70f700f8
@@ -318,6 +321,9 @@ ncurses/bin/tic -x -o ncurses/share/terminfo termite.terminfo
 cd -- "$workdir"
 fetch "$kakoune_url" "$kakoune_sha256"
 ncurses/bin/tic -x -o ncurses/share/terminfo tmux-256color.terminfo
+cd -- "$workdir"
+fetch "$foot_url" "$foot_sha256"
+ncurses/bin/tic -x -o ncurses/share/terminfo foot.terminfo
 
 cd -- "$workdir"
 fetch "$zsh_url" "$zsh_sha256"
