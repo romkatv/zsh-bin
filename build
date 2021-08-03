@@ -147,6 +147,7 @@ case "$ZSH_BIN_KERNEL" in
       perl-utils     \
       rsync          \
       tar            \
+      texinfo        \
       util-linux
 
       cd -- "$workdir"
@@ -173,6 +174,7 @@ case "$ZSH_BIN_KERNEL" in
       perl5        \
       pcre         \
       rsync        \
+      texinfo      \
       yodl
   ;;
   darwin)
@@ -212,10 +214,11 @@ case "$ZSH_BIN_KERNEL" in
       perl                         \
       pcre-devel                   \
       rsync                        \
+      texinfo                      \
       yodl
   ;;
   cygwin*)
-    for cmd in autoconf bash colcrt gcc g++ groff ld make shasum tar wget; do
+    for cmd in autoconf bash colcrt gcc g++ groff ld make makeinfo shasum tar wget; do
       if ! command -v "$cmd" >/dev/null 2>&1; then
         >&2 echo "[error] command not found: $cmd"
         >&2 echo ""
@@ -231,6 +234,7 @@ case "$ZSH_BIN_KERNEL" in
         >&2 echo "  make"
         >&2 echo "  perl"
         >&2 echo "  tar"
+        >&2 echo "  texinfo"
         >&2 echo "  rsync"
         >&2 echo "  util-linux"
         >&2 echo "  wget"
@@ -323,7 +327,7 @@ fetch "$kakoune_url" "$kakoune_sha256"
 ncurses/bin/tic -x -o ncurses/share/terminfo tmux-256color.terminfo
 cd -- "$workdir"
 fetch "$foot_url" "$foot_sha256"
-ncurses/bin/tic -x -o ncurses/share/terminfo foot.terminfo
+ncurses/bin/tic -x -o ncurses/share/terminfo foot.info
 
 cd -- "$workdir"
 fetch "$zsh_url" "$zsh_sha256"
@@ -749,7 +753,7 @@ sed_i "s/@ZSH_BIN_MAGIC@/$magic/g" zshpaths.h
 if [ -e "$workdir"/zsh_doc ]; then
   make -j "$cpus" install.bin install.modules install.fns
 else
-  make -j "$cpus" install
+  make -j "$cpus" install install.info
 fi
 
 rsync -a --copy-links --copy-dirlinks -- "$workdir/$name"/ "$workdir/$name".tmp/
@@ -768,11 +772,11 @@ for dir in share/terminfo/*; do
 done
 
 if [ -e "$workdir"/zsh_doc ]; then
-  cp -r -- "$workdir"/zsh_doc/share/man share/
+  cp -r -- "$workdir"/zsh_doc/share/man "$workdir"/zsh_doc/share/info share/
   cp -r -- "$workdir"/zsh_doc/share/zsh/5.8/help share/zsh/5.8/
 fi
 
-cp -r -- share/man ./
+cp -r -- share/man share/info ./
 
 sed_i 's/local HELPDIR=.*/[[ -n "${HELPDIR:-}" ]] || local HELPDIR="$(<<\\'"$magic"'\
 '"$magic"'\
