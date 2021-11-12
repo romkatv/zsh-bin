@@ -328,6 +328,9 @@ ncurses/bin/tic -x -o ncurses/share/terminfo tmux-256color.terminfo
 cd -- "$workdir"
 fetch "$foot_url" "$foot_sha256"
 ncurses/bin/tic -x -o ncurses/share/terminfo foot.info
+cp ncurses/share/terminfo/66/foot ncurses/share/terminfo/66/foot-extra
+cp ncurses/share/terminfo/66/foot+base ncurses/share/terminfo/66/foot+base-extra
+cp ncurses/share/terminfo/66/foot-direct ncurses/share/terminfo/66/foot-direct-extra
 
 cd -- "$workdir"
 fetch "$zsh_url" "$zsh_sha256"
