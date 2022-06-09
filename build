@@ -969,7 +969,7 @@ cat >share/zsh/5.8/scripts/relocate <<-\END
 	patch_bin "$terminfo_pos" terminfo share/terminfo
 
 	if "$do_patch_bin"; then
-	  if ! fpath="$("$zsh".tmp -c 'print -r -- $fpath[1]')" ||
+	  if ! fpath="$(unset FPATH && "$zsh".tmp -c 'print -r -- $fpath[1]')" ||
 	     [ "${fpath#$dst}" = "$fpath" ]; then
 	    >&2 echo "[error] failed to relocate zsh"
 	    exit 1
