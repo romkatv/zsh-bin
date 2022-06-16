@@ -459,6 +459,8 @@ if [ -n "$url" ]; then
       err="$(command curl -fsSLo "$file" -- "$url" 2>&1)"
     elif command -v wget >/dev/null 2>&1; then
       err="$(command wget -O "$file" -- "$url" 2>&1)"
+    elif command -v fetch >/dev/null 2>&1; then
+      err="$(command fetch -q -o "$file" -- "$url" 2>&1)"
     else
       >&2 echo "${_R}error${_0}: please install ${_G}curl${_0} or ${_G}wget${_0} and retry"
       exit 1
