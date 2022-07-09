@@ -93,7 +93,7 @@ zsh_url=https://github.com/zsh-users/zsh/archive/zsh-5.8.tar.gz
 zsh_doc_url=https://github.com/romkatv/zsh-bin/releases/download/v$zsh_doc_version/zsh-5.8-linux-x86_64.tar.gz
 
 ncurses_sha256=30306e0c76e0f9f1f0de987cf1c82a5c21e1ce6568b9227f7da5b71cbea86c9d
-kitty_sha256=26c89a6d915864eb1dec8f59e4aadffda85ab8bfd6074a0a25812d864b3c9a2c
+kitty_sha256=bdcac2c8cbae7bf2e2843e500ded9f550a6a8b3e66a14565b0156d8301dfc6aa
 termite_sha256=771ecbde374ccefc40f06fb8ee0191bac1a81ab1f8f46b88288d1a9092770529
 kakoune_sha256=b1a0c61f6ce3d123878c501c01183aac5cf951ed718eb1c73949eb86b00678be
 foot_sha256=59769813ed6545c8176af291f49e281860ac70c30ceb5f72f307ec7ce9c992f4
