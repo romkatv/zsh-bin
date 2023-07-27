@@ -229,10 +229,8 @@ basically what [xxh](https://github.com/xxh/xxh) does).
 
 This worked in some cases but not always as the version of Zsh from xxh turned out not portable
 enough for my needs. I set out to build a more portable alternative and created zsh-bin. Since it
-works for me, I figured it might be of use to others.
-
-Users of [zsh4humans](https://github.com/romkatv/zsh4humans) can run `z4h ssh` instead of plain
-`ssh` to fire up Zsh on the remote host with local Zsh configs.
+works for me, I figured it might be of use to others. Eventually I integrated zsh-bin with
+[zsh4humans](https://github.com/romkatv/zsh4humans#ssh).
 
 ## Limitations
 
