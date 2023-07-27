@@ -315,5 +315,5 @@ If you work around this problem by adding a symbolic link to `zsh` to a director
 No manual entry for zsh
 ```
 
-The easiest solution for problems of this kind is to follow installation instructions. If you cannot
-or don't want to, improvise.
+The easiest solution for problems of this kind is to follow the installation instructions. If you
+cannot or don't want to, improvise.
