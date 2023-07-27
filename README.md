@@ -63,6 +63,11 @@ if you don't.
 
 *Tip*: `install` has a few optional flags. Invoke it with `-h` to list them.
 
+*Tip*: if you don't have internet access on the target machine, download
+[install](https://raw.githubusercontent.com/romkatv/zsh-bin/master/install) and the appropriate
+`zsh-*.tar.gz` archive from [releases](https://github.com/romkatv/zsh-bin/releases/latest) on
+another machine, transfer both files to the target machine, and run `install` with `-f` there.
+
 ## Compiling
 
 ```sh
