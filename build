@@ -336,6 +336,19 @@ cd -- "$workdir"
 fetch "$zsh_url" "$zsh_sha256"
 cd zsh-zsh-5.8
 
+# Patch compaudit to use numeric gids instead of names in case we can't look them up
+patch -u Completion/compaudit <<-\END
+	--- Completion/compaudit        2020-02-14 22:08:55.000000000 +0000
+	+++ Completion/compaudit.new    2026-04-02 13:06:45.146417728 +0000
+	@@ -142,5 +142,5 @@
+	   if [[ $GROUP == $LOGNAME && ( -z $GROUPMEM || $GROUPMEM == $LOGNAME ) ]]
+	   then
+	-    _i_wdirs=( ${^_i_wdirs}(N-f:g+w:^g:${GROUP}:,-f:o+w:,-^${_i_owners}) )
+	+    _i_wdirs=( ${^_i_wdirs}(N-f:g+w:^g${_i_gid},-f:o+w:,-^${_i_owners}) )
+	   fi
+	 fi
+	END
+
 patch -u aczsh.m4 <<-\END
 	--- aczsh.m4	2020-12-21 19:06:04.847363893 +0100
 	+++ aczsh.m4.new	2020-12-21 19:05:51.975418771 +0100
